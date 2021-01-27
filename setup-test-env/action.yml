@@ -46,7 +46,6 @@ runs:
       # if: inputs.requiresJAGS && runner.os == 'macOS'
       run: |
         if [ "${{ inputs.requiresJAGS }}" = 'true' ] && [ "${{ runner.os }}" = 'macOS' ]; then
-          rm '/usr/local/bin/gfortran'
           brew install jags
         fi
       shell: bash
