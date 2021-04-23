@@ -56,5 +56,4 @@ runs:
         install.packages("ragg")
         remotes::install_github("jasp-stats/jaspTools")
         jaspTools::setupJaspTools()
-        remotes::update_packages(upgrade = "always")
       shell: Rscript {0}
