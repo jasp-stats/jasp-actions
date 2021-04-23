@@ -23,24 +23,15 @@ runs:
         fi
       shell: bash
 
-    - name: Clone jasp-required-files
+    - name: Clone jasp-required-files on windows
       run: |
-        if [ "${{ runner.os }}" = 'macOS' ]; then
-          branch='MacOS-Original'
-        else
+        if [ "${{ inputs.requiresJAGS }}" = 'true' && "${{ runner.os }}" = 'Windows' ]; then
           branch='Windows'
+          echo "branch=$branch"
+          git clone --branch=$branch https://github.com/jasp-stats/jasp-required-files.git pkgs
         fi
-        echo "branch=$branch"
-        git clone --branch=$branch https://github.com/jasp-stats/jasp-required-files.git pkgs
       working-directory: ..
       shell: bash
-
-    - name: Set R library path
-      run: |
-        libPath <- if (.Platform$OS.type == "windows") "/R/library" else "/Frameworks/R.framework/Versions/3.6/Resources/library/"
-        path <- normalizePath(file.path("..", "pkgs", libPath), winslash = "/")
-        cat("\n.libPaths(c('", path, "', .libPaths()))\n", file = "~/.Rprofile", sep = "", append = TRUE)
-      shell: Rscript {0}
 
     - name: Install JAGS on macOS
       # if: inputs.requiresJAGS && runner.os == 'macOS'
@@ -65,5 +56,5 @@ runs:
         install.packages("ragg")
         remotes::install_github("jasp-stats/jaspTools")
         jaspTools::setupJaspTools()
+        remotes::update_packages(upgrade = "always")
       shell: Rscript {0}
-
