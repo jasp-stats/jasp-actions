@@ -25,7 +25,7 @@ runs:
 
     - name: Clone jasp-required-files on windows
       run: |
-        if [ "${{ inputs.requiresJAGS }}" = 'true' && "${{ runner.os }}" = 'Windows' ]; then
+        if [ "${{ inputs.requiresJAGS }}" = 'true' ] && [ "${{ runner.os }}" = 'Windows' ]; then
           branch='Windows'
           echo "branch=$branch"
           git clone --branch=$branch https://github.com/jasp-stats/jasp-required-files.git pkgs
