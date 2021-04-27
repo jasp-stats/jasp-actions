@@ -1,5 +1,5 @@
 name: 'Set up test environment for JASP unit tests'
-description: 'Downloads and installs R packages and system dependencies. Only works for Windows and macOS.'
+description: 'Downloads and installs R packages and system dependencies.'
 inputs:
   requiresJAGS:
     description: 'Should JAGS be available?'
@@ -38,6 +38,13 @@ runs:
       run: |
         if [ "${{ inputs.requiresJAGS }}" = 'true' ] && [ "${{ runner.os }}" = 'macOS' ]; then
           brew install jags
+        fi
+      shell: bash
+
+    - name: Install JAGS on linux
+      run: |
+        if [ "${{ inputs.requiresJAGS }}" = 'true' ] && [ "${{ runner.os }}" = 'Linux' ]; then
+          sudo apt install jags
         fi
       shell: bash
 
