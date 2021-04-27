@@ -43,9 +43,17 @@ runs:
 
     - name: Install system dependencies on linux
       run: |
-        sudo apt install libgit2-dev libcurl4-openssl-dev
-        if [ "${{ inputs.requiresJAGS }}" = 'true' ] && [ "${{ runner.os }}" = 'Linux' ]; then
-          sudo apt install jags
+        if [ "${{ runner.os }}" = 'Linux' ]; then
+          
+          # ragg                                          requires libharfbuzz-dev libfribidi-dev 
+          # credentials   (dependency of usethis)         requires libgit2-dev
+          # curl          (dependency of usethis)         requires libcurl4-openssl-dev
+          
+          sudo apt install libharfbuzz-dev libfribidi-dev libgit2-dev libcurl4-openssl-dev
+          
+          if [ "${{ inputs.requiresJAGS }}" = 'true' ]; then
+            sudo apt install jags
+          fi
         fi
       shell: bash
 
@@ -60,6 +68,10 @@ runs:
 
     - name: Setup jaspTools
       run: |
+        if ("${{ runner.os }}" == "Linux") {
+          # repos from https://github.com/r-lib/actions/tree/master/examples#standard-ci-workflow
+          options("repos" = "https://packagemanager.rstudio.com/cran/__linux__/focal/latest")
+        }
         install.packages("remotes")
         install.packages("ragg")
         remotes::install_github("jasp-stats/jaspTools")
