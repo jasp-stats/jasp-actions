@@ -41,8 +41,9 @@ runs:
         fi
       shell: bash
 
-    - name: Install JAGS on linux
+    - name: Install system dependencies on linux
       run: |
+        sudo apt install libgit2-dev libcurl4-openssl-dev
         if [ "${{ inputs.requiresJAGS }}" = 'true' ] && [ "${{ runner.os }}" = 'Linux' ]; then
           sudo apt install jags
         fi
