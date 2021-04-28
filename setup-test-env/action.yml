@@ -57,6 +57,15 @@ runs:
         fi
       shell: bash
 
+    - name: Set repository for binaries on Ubuntu
+      run : |
+        if ("${{ runner.os }}" == "Linux") {
+          # repos from https://github.com/r-lib/actions/tree/master/examples#standard-ci-workflow
+          cat('\noptions("repos" = "https://packagemanager.rstudio.com/cran/__linux__/focal/latest")\n', 
+              file = "~/.Rprofile", sep = "", append = TRUE)
+        }
+      shell: Rscript {0}
+
     - name: Locate JAGS on Windows
       # if: inputs.requiresJAGS && runner.os == 'Windows'
       run: |
@@ -68,10 +77,6 @@ runs:
 
     - name: Setup jaspTools
       run: |
-        if ("${{ runner.os }}" == "Linux") {
-          # repos from https://github.com/r-lib/actions/tree/master/examples#standard-ci-workflow
-          options("repos" = "https://packagemanager.rstudio.com/cran/__linux__/focal/latest")
-        }
         install.packages("remotes")
         install.packages("ragg")
         remotes::install_github("jasp-stats/jaspTools")
