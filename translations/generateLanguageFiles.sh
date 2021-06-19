@@ -53,6 +53,7 @@ do
 			QMFILE=${moduleName}/Resources/translations/jaspDesktop-${languageCode}.qm
 		else
 			LANGUAGEFILE=${moduleName}/po/QML-${languageCode}.po
+			QMFILE=${moduleName}/inst/qml/translations/jaspDesktop-${languageCode}.qm
 		fi
 
 		do_lupdate   $moduleName $LANGUAGEFILE
