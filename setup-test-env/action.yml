@@ -23,14 +23,13 @@ runs:
         fi
       shell: bash
 
-    - name: Clone jasp-required-files on windows
+    - name: Install JAGS on Windows
       run: |
         if [ "${{ inputs.requiresJAGS }}" = 'true' ] && [ "${{ runner.os }}" = 'Windows' ]; then
-          branch='Windows'
-          echo "branch=$branch"
-          git clone --branch=$branch https://github.com/jasp-stats/jasp-required-files.git pkgs
+          curl -o wjags.exe --url https://deac-fra.dl.sourceforge.net/project/mcmc-jags/JAGS/4.x/Windows/JAGS-4.3.0.exe
+          ./wjags.exe
+          rm wjags.exe
         fi
-      working-directory: ..
       shell: bash
 
     - name: Install JAGS on macOS
