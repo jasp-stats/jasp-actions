@@ -31,8 +31,9 @@ runs:
           git clone --branch=$branch https://github.com/jasp-stats/jasp-required-files.git pkgs
 
           # set JAGS_ROOT environment variable required for compiling JAGS_MODULES
-          echo $(readlink -f ../pkgs/64/JAGS)
-          echo "JAGS_ROOT=$(readlink -f ../pkgs/64/JAGS)" >> $GITHUB_ENV
+          echo "'$(readlink -f pkgs/64/JAGS)'"
+          echo $(readlink -f pkgs/64/JAGS)
+          echo "JAGS_ROOT=$(readlink -f pkgs/64/JAGS)" >> $GITHUB_ENV
           echo $JAGS_ROOT
         fi
       working-directory: ..
@@ -41,6 +42,7 @@ runs:
     - name: Test JAGS env variable on windows
       run: |
         if [ "${{ inputs.requiresJAGS }}" = 'true' ] && [ "${{ runner.os }}" = 'Windows' ]; then
+          echo "testing JAGS_ROOT location:"
           echo $JAGS_ROOT
         fi
       shell: bash
