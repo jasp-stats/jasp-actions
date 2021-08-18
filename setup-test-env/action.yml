@@ -31,9 +31,9 @@ runs:
           git clone --branch=$branch https://github.com/jasp-stats/jasp-required-files.git pkgs
 
           # set JAGS_ROOT environment variable required for compiling JAGS_MODULES
-          echo '$(readlink -f pkgs/64/JAGS)'
-          echo $(readlink -f pkgs/64/JAGS)
-          echo "JAGS_ROOT=$(readlink -f pkgs/64/JAGS)" >> $GITHUB_ENV
+          jags_root=$(readlink -f pkgs/64/JAGS)
+          echo "jags_root = $jags_root"
+          echo "JAGS_ROOT=$jags_root" >> $GITHUB_ENV
         fi
       working-directory: ..
       shell: bash
