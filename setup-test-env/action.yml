@@ -38,12 +38,12 @@ runs:
       working-directory: ..
       shell: bash
 
-      - name: Test JAGS_ROOT on windows
-        run: |
-          if [ "${{ inputs.requiresJAGS }}" = 'true' ] && [ "${{ runner.os }}" = 'Windows' ]; then
-            echo $JAGS_ROOT
-          fi
-        shell: bash
+    - name: Test JAGS env variable on windows
+      run: |
+        if [ "${{ inputs.requiresJAGS }}" = 'true' ] && [ "${{ runner.os }}" = 'Windows' ]; then
+          echo $JAGS_ROOT
+        fi
+      shell: bash
 
     - name: Install JAGS on macOS
       # if: inputs.requiresJAGS && runner.os == 'macOS'
