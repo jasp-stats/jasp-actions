@@ -13,11 +13,35 @@ on:
         required: false
         type: boolean
         default: false
+      continue_on_schedule:
+        description: 'Should the workflow also be run on a schedule? By default, this only happens when the github.repository.owner is jasp-stats.'
+        type: boolean
+        default: false
 
 jobs:
-  unit-tests:
-    runs-on: ${{ matrix.os }}
+  scheduled-run-check:
+  
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.check.conclusion }}
 
+    steps:
+    - id: check
+      name: Check for a scheduled run
+      run: |
+        if [[ ${inputs.continue_on_schedule} = 'true' || ${{github.event.name}} != 'schedule' || ${{github.repository.owner}} != 'jasp-stats' ]]; then
+          echo "::set-output conclusion=${nm}::error"
+        elif
+          echo "::set-output conclusion=${nm}::success"
+        fi
+      shell: bash
+    
+  unit-tests:
+  
+    needs: scheduled-run-check
+    if: needs.scheduled-run-check.outputs.status == 'success'
+  
+    runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} (R ${{ matrix.r }})
 
     strategy:
