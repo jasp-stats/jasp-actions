@@ -71,10 +71,11 @@ jobs:
           # curl          (dependency of usethis)         requires libcurl4-openssl-dev
 
           sudo apt install libharfbuzz-dev libfribidi-dev libgit2-dev libcurl4-openssl-dev
-
-          if [ "${{ inputs.requiresJAGS }}" = 'true' ]; then
-            sudo apt install jags
-          fi
+        shell: bash
+        
+      - name: Install JAGS on Linux
+        if: runner.os == 'Linux' && inputs.needs_JAGS
+        run: sudo apt install jags
         shell: bash
 
       - name: Set repository for binaries on Linux
@@ -108,7 +109,7 @@ jobs:
 
       # so Rstudio's binary for igraph appears to be incompatible (i.e., crashes hard) with GitHub actions. Instead, we install igraph from source
       - name: Make sure igraph is installed from source
-        if: runner.os == 'Linux' && needs_igraph
+        if: runner.os == 'Linux' && inputs.needs_igraph
         run: install.packages("igraph", type = "source", repos = "https://cloud.r-project.org/")
         shell: Rscript {0}
 
