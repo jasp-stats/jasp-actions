@@ -23,16 +23,16 @@ jobs:
   
     runs-on: ubuntu-latest
     outputs:
-      status: ${{ steps.check.conclusion }}
+      status: ${{ steps.check.status }}
 
     steps:
     - id: check
       name: Check for a scheduled run
       run: |
-        if [[ ${inputs.continue_on_schedule} = 'true' || ${{github.event.name}} != 'schedule' || ${{github.repository.owner}} != 'jasp-stats' ]]; then
-          echo "::set-output conclusion=${nm}::error"
+        if [ ${{ inputs.continue_on_schedule = 'true' || github.event_name != 'schedule' || github.repository_owner != 'jasp-stats' }} ]; then
+          echo "::set-output status=error"
         elif
-          echo "::set-output conclusion=${nm}::success"
+          echo "::set-output status=success"
         fi
       shell: bash
     
