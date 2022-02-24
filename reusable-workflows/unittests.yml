@@ -1,0 +1,118 @@
+on:
+  workflow_call:
+    inputs:
+      needs_JAGS:
+        description: 'Should JAGS be available?'
+        required: false
+        type: boolean
+        default: false
+      needs_igraph:
+        description: '(Linux only) Should igraph be recompiled?'
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      GITHUB_PAT:
+        required: true
+
+jobs:
+  unit-tests:
+    runs-on: ${{ matrix.os }}
+
+    name: ${{ matrix.os }} (${{ matrix.r }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        r: [4.1.0]
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+
+    env:
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
+      R_REMOTES_UPGRADE: never
+      VDIFFR_RUN_TESTS: true
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.r }}
+
+      - name: Install system dependencies on macOS
+        if: runner.os == 'macOS'
+        run: brew install --cask xquartz
+        shell: bash
+
+      - name: Clone jasp-required-files on windows
+        if: runner.os == 'Windows' && inputs.needs_JAGS
+        run: |
+          branch='Windows'
+          echo "branch=$branch"
+          git clone --branch=$branch https://github.com/jasp-stats/jasp-required-files.git pkgs
+
+          # set JAGS_ROOT environment variable required for compiling JAGS_MODULES
+          jags_root=$(readlink -f pkgs/64/JAGS)
+          echo "jags_root = $jags_root"
+          echo "JAGS_ROOT=$jags_root" >> $GITHUB_ENV
+        working-directory: ..
+        shell: bash
+
+      - name: Install JAGS on macOS
+        if: inputs.requiresJAGS && runner.os == 'macOS'
+        run: brew install jags
+        shell: bash
+
+      - name: Install system dependencies on linux
+        if: runner.os == 'Linux'
+        run: |
+          # ragg                                          requires libharfbuzz-dev libfribidi-dev 
+          # credentials   (dependency of usethis)         requires libgit2-dev
+          # curl          (dependency of usethis)         requires libcurl4-openssl-dev
+
+          sudo apt install libharfbuzz-dev libfribidi-dev libgit2-dev libcurl4-openssl-dev
+
+          if [ "${{ inputs.requiresJAGS }}" = 'true' ]; then
+            sudo apt install jags
+          fi
+        shell: bash
+
+      - name: Set repository for binaries on Linux
+        if: runner.os == 'Linux'
+        run : |
+          # repos from https://github.com/r-lib/actions/tree/master/examples#standard-ci-workflow
+          cat('\noptions("repos" = "https://packagemanager.rstudio.com/cran/__linux__/focal/latest")\n', 
+              file = "~/.Rprofile", sep = "", append = TRUE)
+        shell: Rscript {0}
+
+      - name: Locate JAGS on Windows
+        if: inputs.needs_JAGS && runner.os == 'Windows'
+        run: |
+            path <- normalizePath(file.path("..", "pkgs", "64", "JAGS"), winslash = "/")
+            cat("\nSys.setenv(JAGS_HOME = '", path, "')\n", file = "~/.Rprofile", sep = "", append = TRUE)
+      shell: Rscript {0}
+
+      - name: Set environment variable to never compile packages on Windows and macOS
+        if: runner.os != 'Linux'
+        run: |
+          # don't try to install new pkgs versions from source (which often requires additional system dependencies which, when missing, lead to errors, e.g., ragg).
+          cat("\noptions(install.packages.compile.from.source = \"never\")\n", file = "~/.Rprofile", sep = "", append = TRUE)
+          shell: Rscript {0}
+
+      - name: Setup jaspTools
+        run: |
+          install.packages(c("remotes", "ragg"))
+          remotes::install_github("jasp-stats/jaspTools")
+          jaspTools::setupJaspTools()
+        shell: Rscript {0}
+
+      # so Rstudio's binary for igraph appears to be incompatible (i.e., crashes hard) with GitHub actions. Instead, we install igraph from source
+      - name: Make sure igraph is installed from source
+        if: runner.os == 'Linux' && needs_igraph
+        run: install.packages("igraph", type = "source", repos = "https://cloud.r-project.org/")
+        shell: Rscript {0}
+
+      - name: Run unit tests
+        run: source("tests/testthat.R")
+        shell: Rscript {0}
