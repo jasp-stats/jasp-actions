@@ -98,7 +98,7 @@ jobs:
         run: |
           # don't try to install new pkgs versions from source (which often requires additional system dependencies which, when missing, lead to errors, e.g., ragg).
           cat("\noptions(install.packages.compile.from.source = \"never\")\n", file = "~/.Rprofile", sep = "", append = TRUE)
-          shell: Rscript {0}
+        shell: Rscript {0}
 
       - name: Setup jaspTools
         run: |
