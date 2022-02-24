@@ -1,3 +1,5 @@
+name: Reusable workflow for JASP unit tests
+
 on:
   workflow_call:
     inputs:
@@ -91,7 +93,7 @@ jobs:
         run: |
             path <- normalizePath(file.path("..", "pkgs", "64", "JAGS"), winslash = "/")
             cat("\nSys.setenv(JAGS_HOME = '", path, "')\n", file = "~/.Rprofile", sep = "", append = TRUE)
-      shell: Rscript {0}
+        shell: Rscript {0}
 
       - name: Set environment variable to never compile packages on Windows and macOS
         if: runner.os != 'Linux'
