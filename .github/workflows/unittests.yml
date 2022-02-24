@@ -18,7 +18,7 @@ jobs:
   unit-tests:
     runs-on: ${{ matrix.os }}
 
-    name: ${{ matrix.os }} (${{ matrix.r }})
+    name: ${{ matrix.os }} (R ${{ matrix.r }})
 
     strategy:
       fail-fast: false
