@@ -23,7 +23,7 @@ jobs:
   
     runs-on: ubuntu-latest
     outputs:
-      status: ${{ steps.check.status }}
+      status: ${{ steps.check.outputs.status }}
 
     steps:
     - id: check
@@ -37,6 +37,16 @@ jobs:
           echo "::set-output name=status::error"
         fi
       shell: bash
+
+  temp:
+    needs: scheduled-run-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: test
+        run: echo "status = $status"
+        shell: bash 
+        env:
+          status: ${{needs.scheduled-run-check.outputs.status}}
 
   unit-tests:
   
