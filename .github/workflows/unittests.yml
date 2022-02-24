@@ -31,11 +31,11 @@ jobs:
       run: |
         if [ ${{ inputs.continue_on_schedule == 'true' || github.event_name != 'schedule' || github.repository_owner != 'jasp-stats' }} ]; then
           echo "::set-output status=error"
-        elif
+        else
           echo "::set-output status=success"
         fi
       shell: bash
-    
+
   unit-tests:
   
     needs: scheduled-run-check
