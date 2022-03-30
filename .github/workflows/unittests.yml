@@ -97,7 +97,7 @@ jobs:
 
           sudo apt install libharfbuzz-dev libfribidi-dev libgit2-dev libcurl4-openssl-dev
         shell: bash
-        
+
       - name: Install JAGS on Linux
         if: runner.os == 'Linux' && inputs.needs_JAGS
         run: sudo apt install jags
@@ -119,7 +119,7 @@ jobs:
         shell: Rscript {0}
 
       - name: Set environment variable to never compile packages on Windows and macOS
-        if: runner.os != 'Linux'
+        if: runner.os != 'Linux' && matrix.r != 'devel'
         run: |
           # don't try to install new pkgs versions from source (which often requires additional system dependencies which, when missing, lead to errors, e.g., ragg).
           cat("\noptions(install.packages.compile.from.source = \"never\")\n", file = "~/.Rprofile", sep = "", append = TRUE)
