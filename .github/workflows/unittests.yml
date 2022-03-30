@@ -68,6 +68,17 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install --cask xquartz
         shell: bash
+        
+      - name: Install system dependencies on macOS specific to R devel
+        if: runner.os == 'macOS' && matrix.r == 'devel'
+        run: |
+          # ragg                                          requires harfbuzz fribidi
+          # The dependencies of the two R packages below are required for compiling from source on Ubuntu, but macOS seems fine without them
+          # credentials   (dependency of usethis)         requires libgit2
+          # curl          (dependency of usethis)         requires libcurl4-openssl-dev # <- could not find brew version of this
+          
+          brew install harfbuzz fribidi
+        shell: bash
 
       - name: Clone jasp-required-files on windows
         if: runner.os == 'Windows' && inputs.needs_JAGS
