@@ -89,7 +89,7 @@ jobs:
           #wget https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip
           #unzip JAGS-4.3.0-Windows.zip -d JAGS
           
-          R -e 'download.file(\"https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip\", destfile=\"JAGS-4.3.0-Windows.zip\")'
+          R -e 'download.file(r"(https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip)", destfile="JAGS-4.3.0-Windows.zip")'
           7z x JAGS-4.3.0-Windows.zip -oJAGS
 
           # set JAGS_ROOT environment variable required for compiling JAGS_MODULES
