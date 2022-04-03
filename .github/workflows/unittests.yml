@@ -82,11 +82,15 @@ jobs:
           brew install harfbuzz fribidi libgit2 openssl curl
         shell: bash
 
-      - name: Clone jasp-required-files on windows
+      - name: Download JAGS on Windows
         if: runner.os == 'Windows' && inputs.needs_JAGS
         run: |
-          wget https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip
-          unzip JAGS-4.3.0-Windows.zip -d JAGS
+          #wget and unzip are part of msys2 which should be available, but no luck
+          #wget https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip
+          #unzip JAGS-4.3.0-Windows.zip -d JAGS
+          
+          R -e 'download.file("https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip", destfile="JAGS-4.3.0-Windows.zip")'
+          7z x JAGS-4.3.0-Windows.zip -oJAGS
 
           # set JAGS_ROOT environment variable required for compiling JAGS_MODULES
           jags_root=$(readlink -f JAGS)
