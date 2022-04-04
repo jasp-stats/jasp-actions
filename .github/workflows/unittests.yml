@@ -82,22 +82,32 @@ jobs:
           brew install harfbuzz fribidi libgit2 openssl curl
         shell: bash
 
-      - name: Download JAGS on Windows
+      - name: Download JAGS and set JAGS_HOME on Windows
         if: runner.os == 'Windows' && inputs.needs_JAGS
         run: |
           #wget and unzip are part of msys2 which should be available, but no luck
           #wget https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip
           #unzip JAGS-4.3.0-Windows.zip -d JAGS
           
-          R -e 'download.file(\'https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip\', destfile=\'JAGS-4.3.0-Windows.zip\')'
-          7z x JAGS-4.3.0-Windows.zip -oJAGS
-
-          # set JAGS_ROOT environment variable required for compiling JAGS_MODULES
-          jags_root=$(readlink -f JAGS)
-          echo "jags_root = $jags_root"
-          echo "JAGS_ROOT=$jags_root" >> $GITHUB_ENV
+          download.file('https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip', destfile = 'JAGS-4.3.0-Windows.zip')
+          unzip('JAGS-4.3.0-Windows.zip', exdir = 'JAGS')
+          
+          con <- file(description = Sys.getenv("GITHUB_ENV"), open = "a")
+          on.exit(close(con))
+          
+          jagsHome <- normalizePath("JAGS", winslash = "/")
+          cat("JAGS_HOME=", jagsHome, sep = "", file = con) 
+          cat("JAGS_ROOT=", jagsRoot, sep = "", file = con)
         working-directory: ..
+        shell: Rscript {0}
+        
+      - name: Validate JAGS directories
+        if: runner.os == 'Windows' && inputs.needs_JAGS
+        run: |
+          echo "JAGS_HOME = $JAGS_HOME"
+          echo "JAGS_ROOT = $JAGS_ROOT"
         shell: bash
+
 
       - name: Install JAGS on macOS
         if: runner.os == 'macOS' && inputs.needs_JAGS
@@ -125,13 +135,6 @@ jobs:
           # repos from https://github.com/r-lib/actions/tree/master/examples#standard-ci-workflow
           cat('\noptions("repos" = "https://packagemanager.rstudio.com/cran/__linux__/focal/latest")\n', 
               file = "~/.Rprofile", sep = "", append = TRUE)
-        shell: Rscript {0}
-
-      - name: Locate JAGS on Windows
-        if: inputs.needs_JAGS && runner.os == 'Windows'
-        run: |
-            path <- normalizePath(file.path("..", "JAGS"), winslash = "/")
-            cat("\nSys.setenv(JAGS_HOME = '", path, "')\n", file = "~/.Rprofile", sep = "", append = TRUE)
         shell: Rscript {0}
 
       - name: Set environment variable to never compile packages on Windows and macOS
