@@ -96,8 +96,8 @@ jobs:
           on.exit(close(con))
           
           jagsHome <- jagsRoot <- normalizePath("JAGS", winslash = "/")
-          cat("JAGS_HOME=", jagsHome, sep = "", file = con) 
-          cat("JAGS_ROOT=", jagsRoot, sep = "", file = con)
+          cat("JAGS_HOME=", jagsHome, "\n", sep = "", file = con) 
+          cat("JAGS_ROOT=", jagsRoot, "\n", sep = "", file = con)
         working-directory: ..
         shell: Rscript {0}
         
