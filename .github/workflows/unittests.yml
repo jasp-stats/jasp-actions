@@ -84,12 +84,15 @@ jobs:
 
       - name: Download JAGS and set JAGS_HOME on Windows
         if: runner.os == 'Windows' && inputs.needs_JAGS
-        run: |
-          #wget and unzip are part of msys2 which should be available, but no luck
-          #wget https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip
-          #unzip JAGS-4.3.0-Windows.zip -d JAGS
+        run: |         
+          onDevel <- "${{ matrix.r }}" == 'devel'
           
-          download.file('https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip', destfile = 'JAGS-4.3.0-Windows.zip')
+          jagsUrl <- if (onDevel) {
+            'https://static.jasp-stats.org/development/JAGS-4.3.0-Windows-UCRT.zip'
+          } else {
+            'https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip'
+          }
+          download.file(jagsUrl, destfile = 'JAGS-4.3.0-Windows.zip')
           unzip('JAGS-4.3.0-Windows.zip', exdir = 'JAGS')
           
           con <- file(description = Sys.getenv("GITHUB_ENV"), open = "a")
@@ -100,10 +103,10 @@ jobs:
           cat("JAGS_ROOT=", jagsRoot, "\n", sep = "", file = con)
           
           # only works once JAGS is compiled with Rtools42
-          #if ("${{ matrix.r }}" == 'devel' ) {
-          #  Sys.setenv("JAGS_ROOT" = jagsRoot) # GITHUB_ENV is only updated after the step
-          #  install.packages("rjags", type = "source")
-          #}
+          if (onDevel) {
+            Sys.setenv("JAGS_ROOT" = jagsRoot) # GITHUB_ENV is only updated after the step
+            install.packages("rjags", type = "source")
+          }
           
         working-directory: ..
         shell: Rscript {0}
