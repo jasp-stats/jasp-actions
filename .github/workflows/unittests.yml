@@ -99,10 +99,11 @@ jobs:
           cat("JAGS_HOME=", jagsHome, "\n", sep = "", file = con) 
           cat("JAGS_ROOT=", jagsRoot, "\n", sep = "", file = con)
           
-          if ("${{ matrix.r }}" == 'devel' ) {
-            Sys.setenv("JAGS_ROOT" = jagsRoot) # GITHUB_ENV is only updated after this step
-            install.packages("rjags", type = "source")
-          }
+          # only works once JAGS is compiled with Rtools42
+          #if ("${{ matrix.r }}" == 'devel' ) {
+          #  Sys.setenv("JAGS_ROOT" = jagsRoot) # GITHUB_ENV is only updated after the step
+          #  install.packages("rjags", type = "source")
+          #}
           
         working-directory: ..
         shell: Rscript {0}
