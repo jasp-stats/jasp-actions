@@ -99,7 +99,7 @@ jobs:
           cat("JAGS_HOME=", jagsHome, "\n", sep = "", file = con) 
           cat("JAGS_ROOT=", jagsRoot, "\n", sep = "", file = con)
           
-          if (${{ matrix.r == 'devel' }}) {
+          if ("${{ matrix.r }}" == 'devel' ) {
             install.packages("rjags", type = "source")
           }
           
