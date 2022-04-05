@@ -95,6 +95,14 @@ jobs:
           download.file(jagsUrl, destfile = 'JAGS-4.3.0-Windows.zip')
           unzip('JAGS-4.3.0-Windows.zip', exdir = 'JAGS')
           
+          if (onDevel) {
+            # the UCRT zip contains a top level folder, but the other one does not. Here we remove the top level folder
+            from <- file.path(getwd(), "JAGS", dir("JAGS"), dir(dir("JAGS", full.names = TRUE)))
+            to   <- file.path(getwd(), "JAGS",              dir(dir("JAGS", full.names = TRUE)))
+            print(cbind(from, to))
+            file.rename(from = from, to = to)
+          }
+          
           con <- file(description = Sys.getenv("GITHUB_ENV"), open = "a")
           on.exit(close(con))
           
