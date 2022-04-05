@@ -112,7 +112,9 @@ jobs:
           
           # only works once JAGS is compiled with Rtools42
           if (onDevel) {
-            Sys.setenv("JAGS_ROOT" = jagsRoot) # GITHUB_ENV is only updated after the step
+            # GITHUB_ENV is only updated after the step
+            Sys.setenv("JAGS_ROOT" = jagsRoot)
+            Sys.setenv("JAGS_HOME" = jagsRoot)
             install.packages("rjags", type = "source")
           }
           
