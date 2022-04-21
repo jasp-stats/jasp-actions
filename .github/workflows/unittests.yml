@@ -85,23 +85,23 @@ jobs:
       - name: Download JAGS and set JAGS_HOME on Windows
         if: runner.os == 'Windows' && inputs.needs_JAGS
         run: |         
-          onDevel <- "${{ matrix.r }}" == 'devel'
+          afterR420 <- getRversion() >= "4.2.0"
           
-          jagsUrl <- if (onDevel) {
-            'https://static.jasp-stats.org/development/JAGS-4.3.0-Windows-UCRT.zip'
+          jagsUrl <- if (afterR420) {
+            'https://static.jasp-stats.org/development/JAGS-4.3.1-Windows.zip'
           } else {
             'https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip'
           }
           download.file(jagsUrl, destfile = 'JAGS-4.3.0-Windows.zip')
           unzip('JAGS-4.3.0-Windows.zip', exdir = 'JAGS')
           
-          if (onDevel) {
+          #if (onDevel) {
             # the UCRT zip contains a top level folder, but the other one does not. Here we remove the top level folder
-            from <- file.path(getwd(), "JAGS", dir("JAGS"), dir(dir("JAGS", full.names = TRUE)))
-            to   <- file.path(getwd(), "JAGS",              dir(dir("JAGS", full.names = TRUE)))
-            print(cbind(from, to))
-            file.rename(from = from, to = to)
-          }
+          #  from <- file.path(getwd(), "JAGS", dir("JAGS"), dir(dir("JAGS", full.names = TRUE)))
+          #  to   <- file.path(getwd(), "JAGS",              dir(dir("JAGS", full.names = TRUE)))
+          #  print(cbind(from, to))
+          #  file.rename(from = from, to = to)
+          #}
           
           con <- file(description = Sys.getenv("GITHUB_ENV"), open = "a")
           on.exit(close(con))
@@ -111,7 +111,7 @@ jobs:
           cat("JAGS_ROOT=", jagsRoot, "\n", sep = "", file = con)
           
           # only works once JAGS is compiled with Rtools42
-          if (onDevel) {
+          if (afterR420) {
             # GITHUB_ENV is only updated after the step
             Sys.setenv("JAGS_ROOT" = jagsRoot)
             Sys.setenv("JAGS_HOME" = jagsRoot)
