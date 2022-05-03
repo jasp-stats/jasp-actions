@@ -110,7 +110,9 @@ jobs:
         
       - name: Install JAGS on macOS
         if: runner.os == 'macOS' && inputs.needs_JAGS
-        run: brew install jags
+        run: |
+          rm '/usr/local/bin/gfortran'
+          brew install jags
         shell: bash
 
       - name: Install system dependencies on linux
