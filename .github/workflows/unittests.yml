@@ -65,24 +65,6 @@ jobs:
         with:
           r-version: ${{ matrix.r }}
 
-      - name: Install system dependencies on macOS
-        if: runner.os == 'macOS'
-        run: |
-          brew update
-          brew install --cask xquartz
-        shell: bash
-        
-      - name: Install system dependencies on macOS specific to R devel
-        if: runner.os == 'macOS' && matrix.r == 'devel'
-        run: |
-          # ragg                                          requires harfbuzz fribidi
-          # The dependencies of the two R packages below are required for compiling from source on Ubuntu, but macOS seems fine without them
-          # credentials   (dependency of usethis)         requires libgit2
-          # curl          (dependency of usethis)         requires openssl
-          
-          brew install harfbuzz fribidi libgit2 openssl curl
-        shell: bash
-
       - name: Download JAGS and set JAGS_HOME on Windows
         if: runner.os == 'Windows' && inputs.needs_JAGS
         run: |         
@@ -115,47 +97,19 @@ jobs:
           brew install jags
         shell: bash
 
-      - name: Install system dependencies on linux
-        if: runner.os == 'Linux'
-        run: |
-          # ragg                                          requires libharfbuzz-dev libfribidi-dev 
-          # credentials   (dependency of usethis)         requires libgit2-dev
-          # curl          (dependency of usethis)         requires libcurl4-openssl-dev
-
-          sudo apt install libharfbuzz-dev libfribidi-dev libgit2-dev libcurl4-openssl-dev
-        shell: bash
-
       - name: Install JAGS on Linux
         if: runner.os == 'Linux' && inputs.needs_JAGS
         run: sudo apt install jags
         shell: bash
 
-      - name: Set repository for binaries on Linux
-        if: runner.os == 'Linux'
-        run : |
-          # repos from https://github.com/r-lib/actions/tree/master/examples#standard-ci-workflow
-          cat('\noptions("repos" = "https://packagemanager.rstudio.com/cran/__linux__/focal/latest")\n', 
-              file = "~/.Rprofile", sep = "", append = TRUE)
-        shell: Rscript {0}
-
-      - name: Set environment variable to never compile packages on Windows and macOS
-        if: runner.os != 'Linux' && matrix.r != 'devel'
-        run: |
-          # don't try to install new pkgs versions from source (which often requires additional system dependencies which, when missing, lead to errors, e.g., ragg).
-          cat("\noptions(install.packages.compile.from.source = \"never\")\n", file = "~/.Rprofile", sep = "", append = TRUE)
-        shell: Rscript {0}
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          cache-version: 2
+          extra-packages: local::., github::jasp-stats/jaspTools
 
       - name: Setup jaspTools
         run: |
-          install.packages(c("remotes", "ragg"))
-          remotes::install_github("jasp-stats/jaspTools")
           jaspTools::setupJaspTools()
-        shell: Rscript {0}
-
-      # so Rstudio's binary for igraph appears to be incompatible (i.e., crashes hard) with GitHub actions. Instead, we install igraph from source
-      - name: Make sure igraph is installed from source
-        if: runner.os == 'Linux' && inputs.needs_igraph
-        run: install.packages("igraph", type = "source", repos = "https://cloud.r-project.org/")
         shell: Rscript {0}
 
       - name: Run unit tests
