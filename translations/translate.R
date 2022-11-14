@@ -17,7 +17,8 @@ if(!exists("rootfolder"))
 Sys.setlocale(category = "LC_ALL", locale = "en_US.UTF-8")
 
 
-# refactoring xgettext -> jaspXgettext
+#  Start of copied code from R-SVN File src/library/tools/R/xgettext.R
+#  Refactoring xgettext -> jaspXgettext, access tools internal functions.
 jaspXgettext <-
   function(dir, verbose = FALSE, asCall = TRUE)
   {
@@ -63,7 +64,9 @@ jaspXgettext <-
       if(is.call(e)
          && is.name(e[[1L]])
          && (as.character(e[[1L]])
-             %in% c(# "warning",
+             %in% c(
+               # Once we want to translate the strings in these calls, enable these：
+               # "warning",
                # "stop",
                # "message",
                # "packageStartupMessage",
@@ -152,9 +155,10 @@ jaspXgettext2pot <-
           un <- un[-match(e, un)]
         }
   }
+#  End of copied code from xgettext.R
 
-		 
-# refactoring update_pkg_po -> jasp_update_pkg_po
+#  Start of copied code from R-SVN File src/library/tools/R/translations.R;
+#  Refactoring update_pkg_po -> jasp_update_pkg_po.
 jasp_update_pkg_po <- function(pkgdir, pkg = NULL, version = NULL,
                           mergeOpts = "", # only those *in addition* to --update
                           copyright, bugs)
@@ -323,5 +327,6 @@ jasp_update_pkg_po <- function(pkgdir, pkg = NULL, version = NULL,
 
     invisible()
 }
+#  End of copied code from translations.R
 
 try(jasp_update_pkg_po(rootfolder))
