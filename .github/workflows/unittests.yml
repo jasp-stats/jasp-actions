@@ -125,6 +125,11 @@ jobs:
           sudo apt install libharfbuzz-dev libfribidi-dev libgit2-dev libcurl4-openssl-dev
         shell: bash
 
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check
+          cache-version: 2
+
       - name: Install JAGS on Linux
         if: runner.os == 'Linux' && inputs.needs_JAGS
         run: sudo apt install jags
