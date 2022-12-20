@@ -135,14 +135,6 @@ jobs:
         run: sudo apt install jags
         shell: bash
 
-      - name: Set repository for binaries on Linux
-        if: runner.os == 'Linux'
-        run : |
-          # repos from https://github.com/r-lib/actions/tree/master/examples#standard-ci-workflow
-          cat('\noptions("repos" = "https://packagemanager.rstudio.com/cran/__linux__/focal/latest")\n', 
-              file = "~/.Rprofile", sep = "", append = TRUE)
-        shell: Rscript {0}
-
       - name: Set environment variable to never compile packages on Windows and macOS
         if: runner.os != 'Linux' && matrix.r != 'devel'
         run: |
