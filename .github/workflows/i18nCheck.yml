@@ -24,8 +24,8 @@ jobs:
      - name: Ready i18n check script
        run: |
          pwd
-         # stupid but stupid but simple access script:)
-         curl -o $PWD/i18nCheck.R https://raw.githubusercontent.com/shun2wang/jasp-actions/tr_unittest/translations/i18nCheck.R
+         # foolish but simple access script:)
+         curl -o $PWD/i18nCheck.R https://raw.githubusercontent.com/jasp-stats/jasp-actions/master/translations/i18nCheck.R
          # give script permissions
          chmod +x $PWD/i18nCheck.R
        
