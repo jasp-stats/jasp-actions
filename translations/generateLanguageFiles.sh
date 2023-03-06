@@ -11,7 +11,7 @@ create_file_if_it_doesnt_exist() {
 	fi
 }
 
-do_lupdate()	{	lupdate -locations none -extensions cpp,qml,in -recursive $1 -ts $2;	}
+do_lupdate()	{	lupdate -locations none -extensions cpp,h,qml,in -recursive $1 -ts $2;	}
 do_msgattrib()	{	msgattrib --no-obsolete --no-location ${1} -o $1;	}
 
 # in case people try this at home
