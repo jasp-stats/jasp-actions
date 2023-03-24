@@ -10,7 +10,7 @@ cli_h1("Check R translations:")
 rPotData <- potools::get_message_data(dir = ".", verbose = TRUE)
 
 # Get wrong usage of gettext from .R
-rErrorCalls <- subset(rPotData, grepl(pattern="gettext\\(\"\"\\)", call), select = c("file", "call", "line_number"))
+rErrorCalls <- subset(rPotData, grepl(pattern="gettext(|f)\\(\"\"\\)", call), select = c("file", "call", "line_number"))
           
 if (nrow(rErrorCalls) > 0) {
   checkStatus <- c(checkStatus, 1)
