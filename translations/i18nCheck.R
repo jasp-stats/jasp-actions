@@ -10,7 +10,7 @@ cli_h1("Check R translations:")
 rPotData <- potools::get_message_data(dir = ".", verbose = TRUE)
 
 # Get wrong usage of gettext from .R
-rErrorCalls <- subset(rPotData, rPotData$msgid == "", select = c("file", "call", "line_number"))
+rErrorCalls <- subset(rPotData, grepl(pattern="gettext\\(\"\"\\)", call), select = c("file", "call", "line_number"))
           
 if (nrow(rErrorCalls) > 0) {
   checkStatus <- c(checkStatus, 1)
@@ -41,7 +41,7 @@ if (length(qmlFiles) == 0) {
       Call_code        = readL[,1], 
       Line_number      = 1:nrow(readL),
       Translation_call = grepl(pattern="qsTr(|Id|anslate)\\(\".*\"\\)", readL[,1]),
-      Empty_call       = grepl(pattern="qsTr(|Id|anslate)\\(\"*\"\\)", readL[,1]))
+      Empty_call       = grepl(pattern="qsTr(|Id|anslate)\\(\"\"\\)", readL[,1]))
 
     qmlSrcData <- rbind(qmlSrcData, tempData)
   }
