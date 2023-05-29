@@ -1,6 +1,6 @@
 #  Drop "stop" "warning" "message" "packageStartupMessage" in xgettext.
 #  Modified from R-SVN File src/library/tools/R/xgettext.R and translation.R
-#  Snapshot at UTC+8 2022-11-14 12:00
+#  Snapshot at UTC+8 2023-05-29 15:00
 
 
 if(!exists("rootfolder"))
@@ -45,19 +45,24 @@ jaspXgettext <-
         if(is.character(e)) {
           if(!suppress) strings <<- c(strings, e)
         } else if(is.call(e)) {
-          if(is.name(e[[1L]])
-             && (as.character(e[[1L]]) %in% c("gettext", "gettextf"))) {
-            domain <- e[["domain"]]
-            suppress <- !is.null(domain) && !is.name(domain) && is.na(domain)
-            if(as.character(e[[1L]]) == "gettextf") {
-              e <- match.call(gettextf, e)
-              e <- e["fmt"] # just look at fmt arg
-            } else if(as.character(e[[1L]]) == "gettext" &&
-                      !is.null(names(e))) {
-              e <- e[!(names(e) == "domain")] # remove domain arg
-            }
-          } else if (identical(e[[1L]], quote(ngettext)))
-            return()
+	  if(is.name(e[[1L]])) {
+	    fname <- as.character(e[[1L]])
+	    if(fname %in% c("warningCondition", "errorCondition")) {
+		e <- match.call(baseenv()[[fname]], e)
+		e <- e["message"] # ignore condition class etc
+	    } else if(fname %in% c("gettext", "gettextf")) {
+		domain <- e[["domain"]]
+		suppress <- !is.null(domain) && !is.name(domain) && is.na(domain)
+		if(fname == "gettextf") {
+		    e <- match.call(gettextf, e)
+		    e <- e["fmt"] # just look at fmt arg
+	    } else if(fname == "gettext" &&
+			  !is.null(names(e))) {
+		    e <- e[!(names(e) == "domain")] # remove domain arg
+		}
+	    } else if(fname == "ngettext")
+		return()
+	  }
           for(i in seq_along(e)) find_strings2(e[[i]], suppress)
         }
       }
