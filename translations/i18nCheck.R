@@ -24,7 +24,7 @@ if (length(e) > 0) {
   checkStatus <- c(checkStatus, 1)
   # Format data to make read friendly in Github CL
   rPoError <- as.data.frame(matrix(e, ncol=5, byrow=TRUE))[1:4]
-  colnames(rPoError) <- c("Error_Location", "Eorr_Type", "Original_Gettext", "Translated_text")
+  colnames(rPoError) <- c("Error_Location", "Error_Type", "Original_Gettext", "Translated_text")
   cli_alert_danger("some translation error found in po file")
   cli_h2("Please request translation maintainer or refer to following to resolve them:")
   print(t(rPoError))
