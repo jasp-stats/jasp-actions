@@ -11,7 +11,9 @@ rPotData <- potools::get_message_data(dir = ".", verbose = TRUE)
 
 # Get unreasonable usage of gettext from .R
 placeholderData <- subset(rPotData,
-                          grepl(pattern = "(.*%[a-zA-Z].*|.*%[0-9]*[a-zA-Z].*){2,}", call) & !grepl(pattern = "%%", call),
+                          grepl(pattern = "(.*%[a-zA-Z].*|.*%[0-9]*[a-zA-Z].*){2,}", msgid)  # match multiple placeholders > 2 times.
+                            & !grepl(pattern = "%%", msgid) # such '90%%' cases in gettextf
+                            |  grepl(pattern = "(.*%[a-zA-Z].*|.*%[0-9]*[a-zA-Z].*){3,}", msgid_plural), # match plural conditions (> 3 times?)
                           select = c("file", "call", "line_number"))
 rEmptyCalls <- subset(rPotData,
                       grepl(pattern = "gettext(|f)\\(['\"]['\"]\\)", call),
