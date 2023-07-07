@@ -68,6 +68,8 @@ jobs:
       - name: Install system dependencies on macOS
         if: runner.os == 'macOS'
         run: |
+          # see https://github.com/orgs/Homebrew/discussions/4612
+          unset HOMEBREW_NO_INSTALL_FROM_API
           brew update
           # Caught by https://github.com/actions/runner-images/issues/6817
           brew link --overwrite python@3.10
