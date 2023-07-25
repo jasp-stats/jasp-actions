@@ -68,8 +68,8 @@ if (length(qmlFiles) == 0) {
       Source_file      = rep(filePaths),
       Call_code        = readL[, 1],
       Line_number      = 1:nrow(readL),
-      Translation_call = grepl(pattern = "qsTr(|Id|anslate)\\(\".*\"\\)", readL[, 1]),
-      Empty_call       = grepl(pattern = "qsTr(|Id|anslate)\\(\"\"\\)", readL[, 1])
+      Translation_call = grepl(pattern = "qsTr(|Id|anslate)\\(['\"].*['\"]\\)", readL[, 1]),  # match for qsTr, qsTranslate and qsTrId calls.
+      Empty_call       = grepl(pattern = "qsTr(|Id|anslate)\\((|['\"]['\"])\\)", readL[, 1])  # match for empty qsTr(),qsTr(""),qsTr('') etc.
     )
     
     qmlSrcData <- rbind(qmlSrcData, tempData)
