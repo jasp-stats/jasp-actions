@@ -5,9 +5,13 @@ runs:
   using: "composite"
 
   steps:      
+    - uses: actions/checkout@v3
+      with:
+        token: ${{ env.REPO_KEY }}
+
     - uses: r-lib/actions/setup-r@v2
       with:
-        r-version: "4.2.2"
+        r-version: "4.3.1"
  
     - name: Install wlc and gettext
       run: sudo apt -y install wlc gettext
@@ -19,19 +23,6 @@ runs:
       run: ${{ github.action_path }}/findAndMergeWeblate.sh $GITHUB_REPOSITORY
       shell: bash
       
-    - name: checkout repo on development branch
-      if: ${{ env.QML_REPO == 'jaspdesktop' }}
-      uses: actions/checkout@v3
-      with:
-        token: ${{ env.REPO_KEY }}
-        ref: development
-        
-    - name: checkout repo on default branch
-      if: ${{ env.QML_REPO != 'jaspdesktop' }}
-      uses: actions/checkout@v3
-      with:
-        token: ${{ env.REPO_KEY }}
-
     - name: install Qt6
       uses: jurplel/install-qt-action@v3
       with:
