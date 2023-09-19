@@ -125,8 +125,9 @@ jobs:
           # ragg                                          requires libharfbuzz-dev libfribidi-dev 
           # credentials   (dependency of usethis)         requires libgit2-dev
           # curl          (dependency of usethis)         requires libcurl4-openssl-dev
+          # libicu   (dependency of igraph or stringi...) requires libicu libicu-dev
 
-          sudo apt install libharfbuzz-dev libfribidi-dev libgit2-dev libcurl4-openssl-dev
+          sudo apt install libharfbuzz-dev libfribidi-dev libgit2-dev libcurl4-openssl-dev libicu*
         shell: bash
 
       - name: Set environment variable to never compile packages on Windows and macOS
