@@ -142,6 +142,7 @@ jobs:
           extra-packages: |
             any::rcmdcheck
             github::jasp-stats/jaspTools
+            vdiffr@1.0.5
           needs: check
           cache-version: 3
 
