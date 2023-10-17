@@ -74,6 +74,7 @@ jobs:
           # Caught by https://github.com/actions/runner-images/issues/6817
           brew link --overwrite python@3.10
           brew install --cask xquartz
+          brew install libarchive
         shell: bash
         
       - name: Install system dependencies on macOS specific to R devel
