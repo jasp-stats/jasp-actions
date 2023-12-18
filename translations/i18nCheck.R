@@ -27,7 +27,8 @@ placeholderData <- subset(rPotData,
 rEmptyCalls <- subset(rPotData,
                       grepl(pattern = "gettext(|f)\\(['\"]['\"]\\)", call),
                       select = c("file", "call", "line_number"))
-templateMsgError <- subset(rPotData, grepl(pattern = "%\\d\\$", msgid) & !grepl(pattern = "%1\\$", msgid),
+templateMsgError <- subset(rPotData, grepl(pattern = "%\\d\\$", msgid)                                 # match all placeholders like %1$s
+                            & (!grepl(pattern = "%1\\$", msgid) | grepl(pattern = "%[a-zA-Z]", msgid)), # match missing %1$ or %s is present
                            select = c("file", "call", "line_number"))
 
 # Get po/mo compiling error of R
@@ -38,7 +39,7 @@ colnames(rPoError) <- c("Error_Location", "Error_Type", "Original_Gettext", "Tra
 msgErrorCheck(rPoError,         "Some translation erros found in po file")
 msgErrorCheck(rEmptyCalls,      "{nrow(rEmptyCalls)} empty gettext call(s) found")
 msgErrorCheck(placeholderData,  "{nrow(placeholderData)} multiple placeholders without index found")
-msgErrorCheck(templateMsgError, "Multiple placeholders numbers should start from 1")
+msgErrorCheck(templateMsgError, "There are numbering error with multiple placeholders")
   
 if (length(checkStatus) == 0) {
   cli_alert_success("R message check PASSED")
