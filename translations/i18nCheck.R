@@ -36,10 +36,10 @@ e <- capture.output(tools::update_pkg_po("."))
 rPoError <- as.data.frame(matrix(e, ncol=5, byrow=TRUE))[1:4]
 colnames(rPoError) <- c("Error_Location", "Error_Type", "Original_Gettext", "Translated_text")
 
-msgErrorCheck(rPoError,         "Some translation erros found in po file")
+msgErrorCheck(rPoError,         "Some translation errors found in po file")
 msgErrorCheck(rEmptyCalls,      "{nrow(rEmptyCalls)} empty gettext call(s) found")
 msgErrorCheck(placeholderData,  "{nrow(placeholderData)} multiple placeholders without index found")
-msgErrorCheck(templateMsgError, "There are numbering error with multiple placeholders")
+msgErrorCheck(templateMsgError, "There are numbering errors with multiple placeholders")
   
 if (length(checkStatus) == 0) {
   cli_alert_success("R message check PASSED")
