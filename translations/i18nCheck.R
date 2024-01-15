@@ -30,6 +30,9 @@ rEmptyCalls <- subset(rPotData,
 templateMsgError <- subset(rPotData, grepl(pattern = "%\\d\\$", msgid)                                 # match all placeholders like %1$s
                             & (!grepl(pattern = "%1\\$", msgid) | grepl(pattern = "%[a-zA-Z]", msgid)), # match missing %1$ or %s is present
                            select = c("file", "call", "line_number"))
+rErrorCalls <- subset(rPotData,
+                     grepl(pattern = "gettext\\(.*%.*\\)", call),
+                     select = c("file", "call", "line_number"))
 
 # Get po/mo compiling error of R
 e <- capture.output(tools::update_pkg_po("."))
@@ -40,7 +43,8 @@ msgErrorCheck(rPoError,         "Some translation errors found in po file")
 msgErrorCheck(rEmptyCalls,      "{nrow(rEmptyCalls)} empty gettext call(s) found")
 msgErrorCheck(placeholderData,  "{nrow(placeholderData)} multiple placeholders without index found")
 msgErrorCheck(templateMsgError, "There are numbering errors with multiple placeholders")
-  
+msgErrorCheck(rErrorCalls,      "Don't using `gettext()` if `%` inside, but use `gettextf()` instead")
+
 if (length(checkStatus) == 0) {
   cli_alert_success("R message check PASSED")
 }
