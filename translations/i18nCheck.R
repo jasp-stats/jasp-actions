@@ -31,7 +31,7 @@ templateMsgError <- subset(rPotData, grepl(pattern = "%\\d\\$", msgid)          
                             & (!grepl(pattern = "%1\\$", msgid) | grepl(pattern = "%[a-zA-Z]", msgid)), # match missing %1$ or %s is present
                            select = c("file", "call", "line_number"))
 rErrorCalls <- subset(rPotData,
-                     grepl(pattern = "gettext\\(.*%.*\\)", call),
+                     grepl(pattern = "^gettext\\(.*%.*\\)", call),
                      select = c("file", "call", "line_number"))
 
 # Get po/mo compiling error of R
