@@ -43,7 +43,7 @@ msgErrorCheck(rPoError,         "Some translation errors found in po file")
 msgErrorCheck(rEmptyCalls,      "{nrow(rEmptyCalls)} empty gettext call(s) found")
 msgErrorCheck(placeholderData,  "{nrow(placeholderData)} multiple placeholders without index found")
 msgErrorCheck(templateMsgError, "There are numbering errors with multiple placeholders")
-msgErrorCheck(rErrorCalls,      "Don't using `gettext()` if `%` inside, but use `gettextf()` with `%%` instead")
+msgErrorCheck(rErrorCalls,      "Don't use `gettext()` if `%` inside, but use `gettextf()` with `%%` instead")
 
 if (length(checkStatus) == 0) {
   cli_alert_success("R message check PASSED")
