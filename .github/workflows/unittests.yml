@@ -30,9 +30,9 @@ jobs:
       name: Check for a scheduled run
       run: |
         if [ ${{ inputs.continue_on_schedule == 'true' || github.event_name != 'schedule' || github.repository_owner != 'jasp-stats' }} ]; then
-          echo "::set-output name=status::success"
+          echo "status=success" >> ${GITHUB_OUTPUT}
         else
-          echo "::set-output name=status::error"
+          echo "status=error" >> ${GITHUB_OUTPUT}
         fi
       shell: bash
 
