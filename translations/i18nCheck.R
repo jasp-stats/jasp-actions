@@ -35,9 +35,12 @@ rErrorCalls <- subset(rPotData,
                      select = c("file", "call", "line_number"))
 
 # Get po/mo compiling error of R
-e <- capture.output(tools::checkPoFiles("."))
-rPoError <- as.data.frame(matrix(e, ncol=5, byrow=TRUE))[1:4]
-colnames(rPoError) <- c("Error_Location", "Error_Type", "Original_Gettext", "Translated_text")
+e <- capture.output(tools::checkPoFiles(".")) # will get "NO errors" if check passed
+rPoError <- data.frame()
+if (length(e) > 1) {
+  rPoError <- as.data.frame(matrix(e, ncol=5, byrow=TRUE))[1:4]
+  colnames(rPoError) <- c("Error_Location", "Error_Type", "Original_Gettext", "Translated_text")
+}
 
 msgErrorCheck(rPoError,         "Some translation errors found in po file")
 msgErrorCheck(rEmptyCalls,      "{nrow(rEmptyCalls)} empty gettext call(s) found")
