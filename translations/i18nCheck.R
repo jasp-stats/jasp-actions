@@ -34,12 +34,26 @@ rErrorCalls <- subset(rPotData,
                      grepl(pattern = "^gettext\\(.*%.*\\)", call),
                      select = c("file", "call", "line_number"))
 
-# Get po/mo compiling error of R
-e <- capture.output(tools::checkPoFiles(".")) # will get "NO errors" if check passed
+
+# Get po/mo compiling error of R, We customized the tools::checkPoFiles function
+jaspCheckPoFiles <- function(dir) {
+  files <- list.files(path = dir, pattern = "^R-.*[.]po$",
+                      full.names = TRUE, recursive = TRUE)
+  result <- matrix(character(), ncol = 5L, nrow = 0L)
+  for (f in files) {
+    errs <- tools::checkPoFile(f, strictPlural = startsWith(basename(f), "R-"))
+    if (nrow(errs)) result <- rbind(result, errs)
+  }
+  
+  return(result)
+}
+
+e <- jaspCheckPoFiles("./po")
+
 rPoError <- data.frame()
 if (length(e) > 1) {
-  rPoError <- as.data.frame(matrix(e, ncol=5, byrow=TRUE))[1:4]
-  colnames(rPoError) <- c("Error_Location", "Error_Type", "Original_Gettext", "Translated_text")
+  rPoError <- as.data.frame(e)
+  colnames(rPoError) <- c("Error_Location", "", "Error_Type", "Original_Gettext", "Translated_text")
 }
 
 msgErrorCheck(rPoError,         "Some translation errors found in po file")
