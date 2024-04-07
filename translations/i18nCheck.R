@@ -53,7 +53,7 @@ e <- jaspCheckPoFiles("./po")
 rPoError <- data.frame()
 if (length(e) > 1) {
   rPoError <- as.data.frame(e)
-  colnames(rPoError) <- c("Error_Location", "", "Error_Type", "Original_Gettext", "Translated_text")
+  colnames(rPoError) <- c("Error_Location", "References", "Error_Type", "Original_Gettext", "Translated_text")
 }
 
 msgErrorCheck(rPoError,         "Some translation errors found in po file")
