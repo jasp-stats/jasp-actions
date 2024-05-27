@@ -1,6 +1,6 @@
 #  Drop "stop" "warning" "message" "packageStartupMessage" in xgettext.
 #  Modified from R-SVN File src/library/tools/R/xgettext.R and translation.R
-#  Snapshot at UTC+8 2023-05-29 15:00
+#  Snapshot at UTC+8 2024-05-26 18:00
 
 
 if(!exists("rootfolder"))
