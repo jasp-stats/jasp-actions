@@ -5,7 +5,7 @@ echo "Attempting to push any changed files."
 git config user.name github-actions
 git config user.email github-actions@github.com
 
-echo "$(git pull)"
+echo "$(git pull --rebase)"
 echo "Status after pull:"
 echo "$(git status)"
 
@@ -24,7 +24,7 @@ fi
 echo "$(git status)"
 echo "$(git commit -m 'updated translation files')"
 echo "$(git status)"
-echo "$(git push)"
+echo "$(git push --force-with-lease)"
 echo "$(git status)"
 
 if [ $? = 0 ] ; then
