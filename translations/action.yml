@@ -49,5 +49,6 @@ runs:
       shell: bash
       
     - name: Reset and unlock weblate repos
+      if: always()
       run: ${{ github.action_path }}/unlockWeblate.sh
       shell: bash
