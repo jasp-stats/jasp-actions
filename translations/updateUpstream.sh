@@ -5,7 +5,6 @@ echo "Attempting to push any changed files."
 git config user.name github-actions
 git config user.email github-actions@github.com
 
-echo "$(git stash)"
 echo "$(git pull --rebase)"
 echo "Status after pull:"
 echo "$(git status)"
