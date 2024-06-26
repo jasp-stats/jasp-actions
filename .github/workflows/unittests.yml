@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        r: ['4.4.1']
+        r: [release]
         os: [ubuntu-latest, macOS-latest, windows-latest]
 
     env:
