@@ -89,7 +89,7 @@ if (length(qmlFiles) == 0) {
       Line_number      = 1:nrow(readL),
       Translation_call = grepl(pattern = "qsTr(|Id|anslate)\\(['\"].*['\"]\\)", readL[, 1]),  # match for qsTr, qsTranslate and qsTrId calls.
       Empty_call       = grepl(pattern = "qsTr(|Id|anslate)\\((|['\"]['\"])\\)", readL[, 1]),  # match for empty qsTr(),qsTr(""),qsTr('') etc.
-      Link_embedded    = grepl(pattern = "(http|https)://", readL[, 1])
+      Link_embedded    = grepl(pattern = "(http|https)://", readL[, 1]) & !grepl(pattern = "arg\\([\"']?(http|https)://", readL[, 1])
     )
     
     qmlSrcData <- rbind(qmlSrcData, tempData)
