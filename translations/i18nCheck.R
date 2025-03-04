@@ -31,10 +31,10 @@ templateMsgError <- subset(rPotData, grepl(pattern = "%\\d\\$", msgid)          
                            & (!grepl(pattern = "%1\\$", msgid) | grepl(pattern = "%[a-zA-Z]", msgid)), # match missing %1$ or %s is present
                            select = c("file", "call", "line_number"))
 rErrorCalls <- subset(rPotData,
-                      grepl(pattern = "^gettext\\(.*%.*\\)", call),
+                      grepl(pattern = "^gettext\\(.*%.*\\)", call),   # match single % inside gettext()
                       select = c("file", "call", "line_number"))
 rLinkEmbedded <- subset(rPotData,
-                      grepl(pattern = "(http|https)://", call),
+                      grepl(pattern = "(http|https)://", msgid),
                       select = c("file", "call", "line_number"))
 
 # Get po/mo compiling error of R, We customized the tools::checkPoFiles function
