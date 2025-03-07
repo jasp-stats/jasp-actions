@@ -83,7 +83,7 @@ jobs:
           # credentials   (dependency of usethis)         requires libgit2
           # curl          (dependency of usethis)         requires openssl
           
-          brew install harfbuzz fribidi libgit2 openssl curl
+          brew install harfbuzz fribidi libgit2 openssl curl libpng
         shell: bash
 
       - name: Download JAGS and set JAGS_HOME on Windows
