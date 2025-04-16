@@ -18,7 +18,7 @@ jobs:
    
      - name: Setup tools
        run: |
-         install.packages(c("cli", "potools"), NSTALL_opts = c('--no-lock'))
+         install.packages(c("cli", "potools"), INSTALL_opts = c('--no-lock'))
        shell: Rscript {0}
        
      - name: Ready i18n check script
