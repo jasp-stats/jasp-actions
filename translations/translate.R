@@ -1,6 +1,6 @@
 #  Drop "stop" "warning" "message" "packageStartupMessage" in xgettext.
 #  Modified from R-SVN File src/library/tools/R/xgettext.R and translation.R
-#  Snapshot at UTC+8 2024-05-26 18:00
+#  Snapshot at UTC+8 2025-07-27 14:00
 
 
 if(!exists("rootfolder"))
@@ -196,7 +196,8 @@ jasp_update_pkg_po <- function(pkgdir, pkg = NULL, version = NULL,
         if (missing(copyright)) copyright <- NULL
         if (missing(bugs))	bugs <- NULL
         stem <- file.path("inst", "po")
-    } else { # A base package
+    }
+    if (is.null(pkg) || pkg %in% .get_standard_package_names()$base) { # A base package
         pkg <- basename(pkgdir)
         name <- "R"
         version <- as.character(getRversion())
@@ -208,7 +209,6 @@ jasp_update_pkg_po <- function(pkgdir, pkg = NULL, version = NULL,
     ## The interpreter is 'src' for the base package.
     is_base <- (pkg == "base")
     have_src <- paste0(pkg, ".pot") %in% files
-    mergeCmd <- paste("msgmerge", if(is.character(mergeOpts)) paste("--update", mergeOpts))
 
     ## do R-pkg domain first
   if(pot_make) {
@@ -228,33 +228,9 @@ jasp_update_pkg_po <- function(pkgdir, pkg = NULL, version = NULL,
     }
     pofiles <- dir("po", pattern = "R-.*[.]po$", full.names = TRUE)
     pofiles <- pofiles[pofiles != "po/R-en@quot.po"]
-    ## .po file might be newer than .mo
     for (f in pofiles) {
-        lang <- sub("^R-(.*)[.]po$", "\\1", basename(f))
-        ## Interestingly does *not* update the file dates
-        cmd <- paste(mergeCmd, f, shQuote(potfile))
-        if(verbose) cat("Running cmd", cmd, ":\n") else
-        message("  R-", lang, ":", appendLF = FALSE, domain = NA)
-        if(system(cmd) != 0L) {
-            warning("running msgmerge on ", sQuote(f), " failed", domain = NA)
-            next
-        }
-        res <- tools:::checkPoFile(f, TRUE)
-        if(nrow(res)) {
-            print(res)
-            message("not installing", domain = NA)
-            next
-        }
-        if(!mo_make) next
-        dest <- file.path(stem, lang, "LC_MESSAGES")
-        dir.create(dest, FALSE, TRUE)
-        dest <- file.path(dest, sprintf("R-%s.mo", pkg))
- #       if(file_test("-ot", f, dest)) next
-        cmd <- paste("msgfmt -c --statistics -o", shQuote(dest), shQuote(f))
-        if(verbose) cat("Running cmd", cmd, ":\n")
-        if(system(cmd) != 0L)
-            warning(sprintf("running msgfmt on %s failed", basename(f)),
-                    domain = NA, immediate. = TRUE)
+        tools:::processPoFile(f, potfile, localedir = if(mo_make) stem,
+                      mergeOpts = mergeOpts, verbose = verbose)
     }
 
     ## do en@quot
@@ -271,7 +247,7 @@ jasp_update_pkg_po <- function(pkgdir, pkg = NULL, version = NULL,
         if(verbose) cat("Running cmd", cmd, ":\n")
         if(system(cmd) != 0L)
             warning(sprintf("running msgfmt on %s failed", basename(f)),
-                    domain = NA, immediate. = TRUE)
+                    domain = NA)
     }
 
     if(!(is_base || have_src)) return(invisible())
@@ -293,7 +269,7 @@ jasp_update_pkg_po <- function(pkgdir, pkg = NULL, version = NULL,
         od <- setwd("../../..")
         cfiles <- tools:::filtergrep("^#", readLines("po/POTFILES"))
     }
-    cmd <- sprintf("jaspXgettext --keyword=_ --keyword=N_ -o %s", shQuote(ofile))
+    cmd <- sprintf("xgettext --keyword=_ --keyword=N_ -o %s", shQuote(ofile))
     cmd <- c(cmd, paste0("--package-name=", name),
              paste0("--package-version=", version),
              "--add-comments=TRANSLATORS:",
@@ -319,30 +295,8 @@ jasp_update_pkg_po <- function(pkgdir, pkg = NULL, version = NULL,
     pofiles <- dir("po", pattern = "^[^R].*[.]po$", full.names = TRUE)
     pofiles <- pofiles[pofiles != "po/en@quot.po"]
     for (f in pofiles) {
-        lang <- sub("[.]po", "", basename(f))
-        cmd <- paste(mergeCmd, shQuote(f), shQuote(potfile))
-        if(verbose) cat("Running cmd", cmd, ":\n") else
-        message("  ", lang, ":", appendLF = FALSE, domain = NA)
-        if(system(cmd) != 0L) {
-            warning("running msgmerge on ",  f, " failed", domain = NA)
-            next
-        }
-        res <- tools:::checkPoFile(f, TRUE)
-        if(nrow(res)) {
-            print(res)
-            message("not installing", domain = NA)
-            next
-        }
-        if(!mo_make) next
-        dest <- file.path(stem, lang, "LC_MESSAGES")
-        dir.create(dest, FALSE, TRUE)
-        dest <- file.path(dest, sprintf("%s.mo", dom))
-#        if(file_test("-ot", f, dest)) next
-        cmd <- paste("msgfmt -c --statistics -o", shQuote(dest), shQuote(f))
-        if(verbose) cat("Running cmd", cmd, ":\n")
-        if(system(cmd) != 0L)
-            warning(sprintf("running msgfmt on %s failed", basename(f)),
-                    domain = NA)
+        tools:::processPoFile(f, potfile, localedir = if(mo_make) stem,
+                      mergeOpts = mergeOpts, verbose = verbose)
     }
     ## do en@quot
     if (l10n_info()[["UTF-8"]] && mo_make) {
