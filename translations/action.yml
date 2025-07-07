@@ -7,7 +7,7 @@ runs:
   steps:      
     - uses: r-lib/actions/setup-r@v2
       with:
-        r-version: "4.4.0"
+        r-version: "4.5.1"
  
     - name: Install wlc and gettext
       run: sudo apt -y install wlc gettext
@@ -33,9 +33,9 @@ runs:
         token: ${{ env.REPO_KEY }}
 
     - name: install Qt6
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
-        version: 6.4.*
+        version: 6.8.*
         
     - name: generate Language Files
       run: |
