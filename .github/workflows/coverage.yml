@@ -83,7 +83,6 @@ jobs:
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
-        if: secrets.CODECOV_TOKEN != ''   # <--- only run if token is set
         with:
           fail_ci_if_error: ${{ github.event_name != 'pull_request' }}
           files: ./cobertura.xml
