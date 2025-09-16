@@ -78,7 +78,7 @@ jobs:
           unset HOMEBREW_NO_INSTALL_FROM_API
           brew update
           brew install --cask xquartz
-          brew install libarchive
+          brew install libarchive, gettext
         shell: bash
 
       - name: Install system dependencies on macOS specific to R devel
@@ -127,12 +127,10 @@ jobs:
       - name: Install system dependencies on linux
         if: runner.os == 'Linux'
         run: |
-          # ragg                                          requires libharfbuzz-dev libfribidi-dev
-          # credentials   (dependency of usethis)         requires libgit2-dev
-          # curl          (dependency of usethis)         requires libcurl4-openssl-dev
-          # libicu   (dependency of igraph or stringi...) requires libicu libicu-dev
-
-          sudo apt install libharfbuzz-dev libfribidi-dev libgit2-dev libcurl4-openssl-dev libicu*
+          sudo apt install libharfbuzz-dev libfribidi-dev \         # for ragg
+              libgit2-dev libcurl4-openssl-dev \                    # for credentials and curl, dependencies of usethis
+              libicu-dev \                                          # for igraph or stringi
+              libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev  # for cairo
         shell: bash
 
       - name: Set environment variable to never compile packages on Windows and macOS
@@ -146,6 +144,12 @@ jobs:
         if: matrix.packages == 'lockfile'
         with:
           cache-version: 4
+
+      - name: Install jaspTools if missing from lockfile
+        if: matrix.packages == 'lockfile'
+        run: |
+          if (!require("jaspTools")) renv::install("jasp-stats/jaspTools")
+        shell: Rscript {0}
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         if: matrix.packages == 'latest'
@@ -164,12 +168,6 @@ jobs:
       - name: Setup jaspTools
         run: |
           jaspTools::setupJaspTools()
-        shell: Rscript {0}
-
-      # so Rstudio's binary for igraph appears to be incompatible (i.e., crashes hard) with GitHub actions. Instead, we install igraph from source
-      - name: Make sure igraph is installed from source
-        if: runner.os == 'Linux' && inputs.needs_igraph
-        run: install.packages("igraph", type = "source", repos = "https://cloud.r-project.org/")
         shell: Rscript {0}
 
       - name: Run unit tests
