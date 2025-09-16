@@ -73,15 +73,9 @@ jobs:
 
       - name: Install system dependencies on macOS
         if: runner.os == 'macOS'
-        run: |
-          # see https://github.com/orgs/Homebrew/discussions/4612
-          unset HOMEBREW_NO_INSTALL_FROM_API
-          brew update
-          brew install --cask xquartz
-          brew install libarchive
-          brew reinstall gettext
-          brew unlink gettext && brew link --force gettext
-        shell: bash
+        uses: r-hub/actions/setup-r-sysreqs@v1
+        with:
+          type: full
 
       - name: Install system dependencies on macOS specific to R devel
         if: runner.os == 'macOS' && matrix.r == 'devel'
