@@ -78,7 +78,9 @@ jobs:
           unset HOMEBREW_NO_INSTALL_FROM_API
           brew update
           brew install --cask xquartz
-          brew install libarchive gettext
+          brew install libarchive
+          brew reinstall gettext
+          brew unlink gettext && brew link gettext --force
         shell: bash
 
       - name: Install system dependencies on macOS specific to R devel
@@ -127,12 +129,12 @@ jobs:
       - name: Install system dependencies on linux
         if: runner.os == 'Linux'
         run: |
-          # libharfbuzz-dev libfribidi-dev                         for ragg
-          # libgit2-dev libcurl4-openssl-dev                       for usethis
-          # libicu-dev                                             for igraph/stringi
-          # libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev   for cairo
+          # ragg:           libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev
+          # usethis:        libgit2-dev libcurl4-openssl-dev
+          # igraph/stringi: libicu-dev
+          # cairo:          libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev
           sudo apt-get install -y \
-              libharfbuzz-dev libfribidi-dev \
+              libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
               libgit2-dev libcurl4-openssl-dev \
               libicu-dev \
               libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev
