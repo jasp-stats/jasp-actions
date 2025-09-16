@@ -30,9 +30,9 @@ jobs:
       name: Check for a scheduled run
       run: |
         if [ ${{ inputs.continue_on_schedule == 'true' || github.event_name != 'schedule' || github.repository_owner != 'jasp-stats' }} ]; then
-          echo "::set-output name=status::success"
+          echo "status=success" >> $GITHUB_OUTPUT
         else
-          echo "::set-output name=status::error"
+          echo "status=error" >> $GITHUB_OUTPUT
         fi
       shell: bash
 
@@ -78,7 +78,7 @@ jobs:
           unset HOMEBREW_NO_INSTALL_FROM_API
           brew update
           brew install --cask xquartz
-          brew install libarchive, gettext
+          brew install libarchive gettext
         shell: bash
 
       - name: Install system dependencies on macOS specific to R devel
@@ -127,10 +127,15 @@ jobs:
       - name: Install system dependencies on linux
         if: runner.os == 'Linux'
         run: |
-          sudo apt install libharfbuzz-dev libfribidi-dev \         # for ragg
-              libgit2-dev libcurl4-openssl-dev \                    # for credentials and curl, dependencies of usethis
-              libicu-dev \                                          # for igraph or stringi
-              libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev  # for cairo
+          # libharfbuzz-dev libfribidi-dev                         for ragg
+          # libgit2-dev libcurl4-openssl-dev                       for usethis
+          # libicu-dev                                             for igraph/stringi
+          # libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev   for cairo
+          sudo apt-get install -y \
+              libharfbuzz-dev libfribidi-dev \
+              libgit2-dev libcurl4-openssl-dev \
+              libicu-dev \
+              libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev
         shell: bash
 
       - name: Set environment variable to never compile packages on Windows and macOS
