@@ -121,19 +121,27 @@ jobs:
         shell: bash
 
       - name: Install system dependencies on linux
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.packages == 'lockfile'
         run: |
           install.packages("renv")
+          # put pak in a different library
+          lib <- Sys.getenv("R_LIBS_SITE")
+          if (lib == "") {
+            lib <- file.path(dirname(.Library), "site-library")
+            cat(sprintf("R_LIBS_SITE=%s\n", lib), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
+            message("Setting R_LIBS_SITE to ", lib)
+          }
           install.packages("pak", lib = lib, repos = sprintf(
-              "https://r-lib.github.io/p/pak/%s/%s/%s/%s",
-              "stable",
-              .Platform$pkgType,
-              R.Version()$os,
-              R.Version()$arch
-            ))
+            "https://r-lib.github.io/p/pak/%s/%s/%s/%s",
+            "stable",
+            .Platform$pkgType,
+            R.Version()$os,
+            R.Version()$arch
+          ))
           lf <- renv::lockfile_read("renv.lock")
           pkgs <- Filter(function(x) x$Source != "GitHub", lf$Packages)
           pkgs2 <- unname(vapply(pkgs, FUN = `[[`, FUN.VALUE = character(1L), "Package"))
+          .libPaths(lib) # make sure pak is found
           res <- pak::pkg_sysreqs(pkgs2, sysreqs_platform = "ubuntu")
           cmd <- paste("sudo", res$install_scripts)
           cat(sprintf("Running cmd:\n%s\n", cmd))
