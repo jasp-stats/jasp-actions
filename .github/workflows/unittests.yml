@@ -123,16 +123,22 @@ jobs:
       - name: Install system dependencies on linux
         if: runner.os == 'Linux'
         run: |
-          # ragg:           libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev
-          # usethis:        libgit2-dev libcurl4-openssl-dev
-          # igraph/stringi: libicu-dev
-          # cairo:          libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev
-          sudo apt-get install -y \
-              libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
-              libgit2-dev libcurl4-openssl-dev \
-              libicu-dev \
-              libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev
-        shell: bash
+          install.packages("renv")
+          install.packages("pak", lib = lib, repos = sprintf(
+              "https://r-lib.github.io/p/pak/%s/%s/%s/%s",
+              "stable",
+              .Platform$pkgType,
+              R.Version()$os,
+              R.Version()$arch
+            ))
+          lf <- renv::lockfile_read("renv.lock")
+          pkgs <- Filter(function(x) x$Source != "GitHub", lf$Packages)
+          pkgs2 <- unname(vapply(pkgs, FUN = `[[`, FUN.VALUE = character(1L), "Package"))
+          res <- pak::pkg_sysreqs(pkgs2, sysreqs_platform = "ubuntu")
+          cmd <- paste("sudo", res$install_scripts)
+          cat(sprintf("Running cmd:\n%s\n", cmd))
+          system(paste("sudo", res$install_scripts))
+        shell: Rscript {0}
 
       - name: Set environment variable to never compile packages on Windows and macOS
         if: runner.os != 'Linux' && matrix.r != 'devel'
