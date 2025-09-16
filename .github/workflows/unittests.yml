@@ -42,7 +42,8 @@ jobs:
     if: needs.scheduled-run-check.outputs.status == 'success'
 
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} (R ${{ matrix.r }})
+    name: ${{ matrix.os }} (R ${{ matrix.r }} - ${{ matrix.packages }} packages)
+    continue-on-error: ${{ matrix.packages == 'latest' }}
 
     strategy:
       fail-fast: false
