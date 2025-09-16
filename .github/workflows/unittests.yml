@@ -20,7 +20,7 @@ on:
 
 jobs:
   scheduled-run-check:
-  
+
     runs-on: ubuntu-latest
     outputs:
       status: ${{ steps.check.outputs.status }}
@@ -37,18 +37,23 @@ jobs:
       shell: bash
 
   unit-tests:
-  
+
     needs: scheduled-run-check
     if: needs.scheduled-run-check.outputs.status == 'success'
-  
+
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} (R ${{ matrix.r }})
 
     strategy:
       fail-fast: false
       matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
         r: [release]
-        os: [ubuntu-latest, macOS-latest, windows-latest]
+        packages: [lockfile]
+        include:
+        - os: ubuntu-latest
+          r: release
+          packages: latest
 
     env:
       R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
@@ -59,7 +64,7 @@ jobs:
       _R_CHECK_MATRIX_DATA_: TRUE # only works from R 4.2.0 onwards
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: r-lib/actions/setup-r@v2
         with:
@@ -74,7 +79,7 @@ jobs:
           brew install --cask xquartz
           brew install libarchive
         shell: bash
-        
+
       - name: Install system dependencies on macOS specific to R devel
         if: runner.os == 'macOS' && matrix.r == 'devel'
         run: |
@@ -82,35 +87,35 @@ jobs:
           # The dependencies of the two R packages below are required for compiling from source on Ubuntu, but macOS seems fine without them
           # credentials   (dependency of usethis)         requires libgit2
           # curl          (dependency of usethis)         requires openssl
-          
+
           brew install harfbuzz fribidi libgit2 openssl curl libpng
         shell: bash
 
       - name: Download JAGS and set JAGS_HOME on Windows
         if: runner.os == 'Windows' && inputs.needs_JAGS
-        run: |         
+        run: |
           beforeR420 <- getRversion() < "4.2.0"
-          
+
           jagsUrl <- if (beforeR420) {
             'https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip'
           } else {
             'https://static.jasp-stats.org/development/JAGS-4.3.1-Windows.zip'
           }
-          
+
           destfile <- 'JAGS-Windows.zip'
           download.file(jagsUrl, destfile = destfile)
           unzip(destfile, exdir = 'JAGS')
-          
+
           con <- file(description = Sys.getenv("GITHUB_ENV"), open = "a")
           on.exit(close(con))
-          
+
           jagsHome <- jagsRoot <- normalizePath("JAGS", winslash = "/")
           cat("JAGS_HOME=", jagsHome, "\n", sep = "", file = con)
-          cat("JAGS_ROOT=", jagsRoot, "\n", sep = "", file = con)         
-          
+          cat("JAGS_ROOT=", jagsRoot, "\n", sep = "", file = con)
+
         working-directory: ..
         shell: Rscript {0}
-        
+
       - name: Install JAGS on macOS
         if: runner.os == 'macOS' && inputs.needs_JAGS
         run: |
@@ -121,7 +126,7 @@ jobs:
       - name: Install system dependencies on linux
         if: runner.os == 'Linux'
         run: |
-          # ragg                                          requires libharfbuzz-dev libfribidi-dev 
+          # ragg                                          requires libharfbuzz-dev libfribidi-dev
           # credentials   (dependency of usethis)         requires libgit2-dev
           # curl          (dependency of usethis)         requires libcurl4-openssl-dev
           # libicu   (dependency of igraph or stringi...) requires libicu libicu-dev
@@ -135,8 +140,14 @@ jobs:
           # don't try to install new pkgs versions from source (which often requires additional system dependencies which, when missing, lead to errors, e.g., ragg).
           cat("\noptions(install.packages.compile.from.source = \"never\")\n", file = "~/.Rprofile", sep = "", append = TRUE)
         shell: Rscript {0}
-        
+
+      - uses: r-lib/actions/setup-renv@v2
+        if: matrix.packages == 'lockfile'
+        with:
+          cache-version: 4
+
       - uses: r-lib/actions/setup-r-dependencies@v2
+        if: matrix.packages == 'latest'
         with:
           extra-packages: |
             any::rcmdcheck
