@@ -80,7 +80,7 @@ jobs:
           brew install --cask xquartz
           brew install libarchive
           brew reinstall gettext
-          brew unlink gettext && brew link gettext --force
+          brew unlink gettext && brew link --force gettext
         shell: bash
 
       - name: Install system dependencies on macOS specific to R devel
