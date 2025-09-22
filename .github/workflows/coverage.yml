@@ -45,29 +45,107 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install system dependencies on linux
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt install libharfbuzz-dev libfribidi-dev libgit2-dev libcurl4-openssl-dev libicu*
-        shell: bash
-
       - uses: r-lib/actions/setup-r@v2
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
+        # copied from https://github.com/r-lib/actions/blob/6b49fefb2846ed3e5e6e58366e7f7dfe01377f02/setup-r-dependencies/action.yaml#L67
+      - name: Set site library path
+        run: |
+          # Set site library path
+          cat("::group::Set site library path\n")
+          libpak <- Sys.getenv("R_LIB_FOR_PAK")
+          if (libpak != "") {
+            message("R_LIB_FOR_PAK is already set to ", libpak)
+          }
+          if (Sys.getenv("RENV_PROJECT") != "") {
+            message("renv project detected, no need to set R_LIBS_SITE")
+            if (libpak == "") {
+              cat(sprintf("R_LIB_FOR_PAK=%s\n", .libPaths()[1]), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
+              message("Setting R_LIB_FOR_PAK to ", .libPaths()[1])
+            }
+            q("no")
+          }
+          lib <- Sys.getenv("R_LIBS_SITE")
+          if (lib == "") {
+            lib <- file.path(dirname(.Library), "site-library")
+            cat(sprintf("R_LIBS_SITE=%s\n", lib), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
+            message("Setting R_LIBS_SITE to ", lib)
+            if (libpak == "") {
+              cat(sprintf("R_LIB_FOR_PAK=%s\n", lib), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
+              message("Setting R_LIB_FOR_PAK to ", lib)
+            }
+          } else {
+            message("R_LIBS_SITE is already set to ", lib)
+            if (libpak == "") {
+              plib <- strsplit(lib, .Platform$path.sep)[[1]][[1]]
+              cat(sprintf("R_LIB_FOR_PAK=%s\n", plib), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
+              message("Setting R_LIB_FOR_PAK to ", plib)
+            }
+          }
+          if (nchar("${{ env.R_LIBS_USER && 'ok' || '' }}") == 0) {
+            message("R_LIBS_USER GH env var is unset, setting now: ", Sys.getenv("R_LIBS_USER"))
+            cat(sprintf("R_LIBS_USER=%s\n", Sys.getenv("R_LIBS_USER")), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
+          } else {
+            message("R_LIBS_USER GH env var is already set: ", Sys.getenv("R_LIBS_USER"))
+          }
+          dir.create(Sys.getenv("R_LIBS_SITE"), recursive = TRUE, showWarnings = FALSE)
+          dir.create(Sys.getenv("R_LIBS_USER"), recursive = TRUE, showWarnings = FALSE)
+          cat("::endgroup::\n")
+        shell: Rscript {0}
+
+      - name: Install pak (Unix)
+        run: |
+          # Install pak
+          echo "::group::Install pak"
+          if which sudo >/dev/null; then SUDO="sudo -E --preserve-env=PATH env"; else SUDO=""; fi
+          $SUDO R -q -e 'dir.create(Sys.getenv("R_LIB_FOR_PAK"), recursive = TRUE, showWarnings = FALSE)'
+          $SUDO R -q -e 'if (FALSE) { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK")) } else { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK"), repos = sprintf("https://r-lib.github.io/p/pak/%s/%s/%s/%s", "stable", .Platform$pkgType, R.Version()$os, R.Version()$arch)) }'
+          echo "::endgroup::"
+        shell: bash
+
+      - name: Install system dependencies on linux
+        run: |
+          install.packages("renv")
+          lib <- Sys.getenv("R_LIB_FOR_PAK")
+          lf <- renv::lockfile_read("renv.lock")
+          pkgs <- Filter(function(x) x$Source != "GitHub", lf$Packages)
+          pkgs2 <- unname(vapply(pkgs, FUN = `[[`, FUN.VALUE = character(1L), "Package"))
+          .libPaths(lib) # make sure pak is found
+          res <- pak::pkg_sysreqs(pkgs2, sysreqs_platform = "ubuntu")
+          cmd <- paste("sudo", res$install_scripts)
+          cat(sprintf("Running cmd:\n%s\n", cmd))
+          system(paste("sudo", res$install_scripts))
+        shell: Rscript {0}
+
+      - uses: r-lib/actions/setup-renv@v2
         with:
-          extra-packages: |
-            any::covr
-            github::jasp-stats/jaspTools
-          needs: check
-          cache-version: 0
+          cache-version: 4
+      - name: Test coverage
+        run: |
+          cov <- covr::package_coverage(
+            quiet = FALSE,
+            clean = FALSE,
+            install_path = file.path(normalizePath(Sys.getenv("RUNNER_TEMP"), winslash = "/"), "package")
+          )
+
+
+      - name: Install jaspTools if missing from lockfile
+        run: |
+          if (!require("jaspTools")) renv::install("jasp-stats/jaspTools")
+        shell: Rscript {0}
+
+      - name: Setup jaspTools
+        run: |
+          jaspTools::setupJaspTools()
+        shell: Rscript {0}
 
       - name: Install JAGS on Linux
-        if: runner.os == 'Linux' && inputs.needs_JAGS == true
+        if: inputs.needs_JAGS
         run: sudo apt install jags
         shell: bash
 
-      - name: Setup jaspTools
-        run: jaspTools::setupJaspTools()
+      - name: Install covr if missing from lockfile
+        run: |
+          if (!require("covr")) renv::install("covr")
         shell: Rscript {0}
 
       - name: Test coverage
