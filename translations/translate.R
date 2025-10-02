@@ -197,7 +197,7 @@ jasp_update_pkg_po <- function(pkgdir, pkg = NULL, version = NULL,
         if (missing(bugs))	bugs <- NULL
         stem <- file.path("inst", "po")
     }
-    if (is.null(pkg) || pkg %in% .get_standard_package_names()$base) { # A base package
+    if (is.null(pkg) || pkg %in% tools:::.get_standard_package_names()$base) { # A base package
         pkg <- basename(pkgdir)
         name <- "R"
         version <- as.character(getRversion())
