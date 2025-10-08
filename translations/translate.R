@@ -37,7 +37,7 @@ processPoFile <- function (f, potfile,
         return(warning(sprintf("running msgmerge on %s failed", sQuote(f)),
                        call. = FALSE, domain = NA))
 
-    res <- checkPoFile(f, TRUE)
+    res <- tools::checkPoFile(f, TRUE)
     if (nrow(res)) {
         print(res)
         if (mo_make) message("not installing", domain = NA)
@@ -271,7 +271,7 @@ jasp_update_pkg_po <- function(pkgdir, pkg = NULL, version = NULL,
     pofiles <- dir("po", pattern = "R-.*[.]po$", full.names = TRUE)
     pofiles <- pofiles[pofiles != "po/R-en@quot.po"]
     for (f in pofiles) {
-        tools:::processPoFile(f, potfile, localedir = if(mo_make) stem,
+        processPoFile(f, potfile, localedir = if(mo_make) stem,
                       mergeOpts = mergeOpts, verbose = verbose)
     }
 
@@ -337,7 +337,7 @@ jasp_update_pkg_po <- function(pkgdir, pkg = NULL, version = NULL,
     pofiles <- dir("po", pattern = "^[^R].*[.]po$", full.names = TRUE)
     pofiles <- pofiles[pofiles != "po/en@quot.po"]
     for (f in pofiles) {
-        tools:::processPoFile(f, potfile, localedir = if(mo_make) stem,
+        processPoFile(f, potfile, localedir = if(mo_make) stem,
                       mergeOpts = mergeOpts, verbose = verbose)
     }
     ## do en@quot
