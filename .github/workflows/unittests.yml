@@ -118,6 +118,15 @@ jobs:
         run: |
           # rm '/usr/local/bin/gfortran'
           brew install jags
+          brew info jags
+          # Figure out where Homebrew installed JAGS
+          JAGS_PREFIX=$(brew --prefix jags)
+          echo "JAGS installed at: $JAGS_PREFIX"
+          # Create /usr/local/lib if needed and link the dylibs
+          sudo mkdir -p /usr/local/lib
+          sudo ln -sf "${JAGS_PREFIX}/lib/libjags."*.dylib /usr/local/lib/
+          # Optional check
+          ls -l /usr/local/lib/libjags*.dylib
         shell: bash
 
         # copied from https://github.com/r-lib/actions/blob/6b49fefb2846ed3e5e6e58366e7f7dfe01377f02/setup-r-dependencies/action.yaml#L67
@@ -216,6 +225,12 @@ jobs:
         if: matrix.packages == 'lockfile'
         with:
           cache-version: 4
+
+      - name: check rjags installation on macOS
+        if: runner.os == 'macOS' && inputs.needs_JAGS
+        run: |
+          otool -L $(Rscript -e 'cat(system.file("libs", "rjags.so", package = "rjags"))')
+        shell: bash
 
       - name: Install jaspTools if missing from lockfile
         if: matrix.packages == 'lockfile'
