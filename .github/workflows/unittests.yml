@@ -120,11 +120,16 @@ jobs:
           brew install jags
           brew info jags
           # Figure out where Homebrew installed JAGS
+          # on arm this is a different location than what the rjags binary expects
           JAGS_PREFIX=$(brew --prefix jags)
           echo "JAGS installed at: $JAGS_PREFIX"
           # Create /usr/local/lib if needed and link the dylibs
           sudo mkdir -p /usr/local/lib
           sudo ln -sf "${JAGS_PREFIX}/lib/libjags."*.dylib /usr/local/lib/
+          # move the modules folder (basemod, etc.) as well
+          if [ -d "${JAGS_PREFIX}/lib/JAGS" ]; then
+            sudo ln -sfn "${JAGS_PREFIX}/lib/JAGS" /usr/local/lib/JAGS
+          fi
           # Optional check
           ls -l /usr/local/lib/libjags*.dylib
         shell: bash
