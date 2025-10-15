@@ -226,12 +226,6 @@ jobs:
         with:
           cache-version: 4
 
-      - name: check rjags installation on macOS
-        if: runner.os == 'macOS' && inputs.needs_JAGS
-        run: |
-          otool -L $(Rscript -e 'cat(system.file("libs", "rjags.so", package = "rjags"))')
-        shell: bash
-
       - name: Install jaspTools if missing from lockfile
         if: matrix.packages == 'lockfile'
         run: |
