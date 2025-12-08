@@ -126,12 +126,14 @@ jobs:
           # Create /usr/local/lib if needed and link the dylibs
           sudo mkdir -p /usr/local/lib
           sudo ln -sf "${JAGS_PREFIX}/lib/libjags."*.dylib /usr/local/lib/
+          sudo ln -sf "${JAGS_PREFIX}/lib/libjrmath."*.dylib /usr/local/lib/
           # move the modules folder (basemod, etc.) as well
           if [ -d "${JAGS_PREFIX}/lib/JAGS" ]; then
             sudo ln -sfn "${JAGS_PREFIX}/lib/JAGS" /usr/local/lib/JAGS
           fi
-          # Optional check
+          # check for the moved files
           ls -l /usr/local/lib/libjags*.dylib
+          ls -l /usr/local/lib/libjrmath*.dylib
         shell: bash
 
         # copied from https://github.com/r-lib/actions/blob/6b49fefb2846ed3e5e6e58366e7f7dfe01377f02/setup-r-dependencies/action.yaml#L67
