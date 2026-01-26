@@ -162,8 +162,12 @@ jobs:
 
       - name: Copy examples to inst (allows coverage testing for examples)
         run: |
-          mkdir -p inst/examples
-          cp -r examples/* inst/examples/
+          if [ -d examples ] && [ -n "$(ls -A examples 2>/dev/null)" ]; then
+            mkdir -p inst/examples
+            cp -r examples/* inst/examples/
+          else
+            echo "No examples directory or no example files found; skipping copy."
+          fi
         shell: bash
 
       - name: Test coverage
