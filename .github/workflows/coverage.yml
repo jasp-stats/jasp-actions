@@ -160,6 +160,12 @@ jobs:
           if (!require("covr")) renv::install("covr")
         shell: Rscript {0}
 
+      - name: Copy examples to inst (allows coverage testing for examples)
+        run: |
+          mkdir -p inst/examples
+          cp -r examples/* inst/examples/
+        shell: bash
+
       - name: Test coverage
         run: |
           cov <- covr::package_coverage(
