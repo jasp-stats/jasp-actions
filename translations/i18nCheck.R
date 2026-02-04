@@ -84,12 +84,12 @@ cli_h1("Check QML translations:")
 # Get QML files paths
 qmlSrcFiles <- list.files(path = file.path("inst", "qml"), pattern = "\\.qml", recursive = TRUE, full.names = TRUE)
 qmlPoFiles <- list.files(path = "po", pattern = "^QML-.*[.]po$",
-                                    full.names = TRUE, recursive = TRUE)
+                         full.names = TRUE, recursive = TRUE)
 
 if (length(qmlSrcFiles) == 0) {
   cli_alert("No QML file found, maybe it's not a valid JASP module.")
 } else {
-  # Generate pot meta data from QML
+  # Generate pot meta data from QML source file
   qmlSrcData <- data.frame()
   message("Getting QML-level messages...")
   
@@ -109,18 +109,23 @@ if (length(qmlSrcFiles) == 0) {
   }
   
   
+  # Collecting translation strings from QML PO file
   qmlPoMsgstr <- data.frame()
   
-  for (i in 1:length(qmlPoFiles)) {
-    pofilePaths <- paste0("./", qmlPoFiles[i])
-    readPo <- as.data.frame(readLines(pofilePaths, warn = FALSE))
-    tempPoData <- data.frame(
-      Source_file      = rep(pofilePaths),
-      Line_number      = 1:nrow(readPo),
-      Empty_Msgstr = grepl(pattern = "^msgstr\\s+\"\\s+\"\\s*$", readPo[, 1])
-    )
-    
-    qmlPoMsgstr <- rbind(qmlPoMsgstr, tempPoData)
+  if(length(qmlPoFiles) > 0) {
+    for (i in 1:length(qmlPoFiles)) {
+      pofilePaths <- paste0("./", qmlPoFiles[i])
+      readPo <- as.data.frame(readLines(pofilePaths, warn = FALSE))
+      tempPoData <- data.frame(
+        Source_file      = rep(pofilePaths),
+        Line_number      = 1:nrow(readPo),
+        Empty_Msgstr = grepl(pattern = "^msgstr\\s+\"\\s+\"\\s*$", readPo[, 1])
+      )
+      
+      qmlPoMsgstr <- rbind(qmlPoMsgstr, tempPoData)
+    }
+  } else {
+    cli_alert("No QML-*.PO files found.")
   }
   
   hasEmptyCall  <- qmlSrcData$Empty_call == TRUE
@@ -147,7 +152,6 @@ if (length(qmlSrcFiles) == 0) {
 }
 
 if (rFailed || qmlFailed) {
-  # failing github action,custom exit code to different from a system exit
   quit(status = 10)
 } else {
   cli_alert_success("All i18n check PASSED")
