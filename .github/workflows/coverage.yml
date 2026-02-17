@@ -101,7 +101,12 @@ jobs:
           $SUDO R -q -e 'if (FALSE) { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK")) } else { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK"), repos = sprintf("https://r-lib.github.io/p/pak/%s/%s/%s/%s", "stable", .Platform$pkgType, R.Version()$os, R.Version()$arch)) }'
           echo "::endgroup::"
         shell: bash
-
+        
+      - name: INSTALL_DEPS
+        run: |
+            sudo apt install cmake libcairo2-dev libcurl4-openssl-dev libfontconfig1-dev libfreetype6-dev libglpk-dev libjpeg-dev libpng-dev pandoc
+        shell: bash
+        
       # adjusted from https://github.com/r-lib/actions/blob/6b49fefb2846ed3e5e6e58366e7f7dfe01377f02/setup-renv/action.yaml#L25-L28
       - name: Set RENV_PATHS_ROOT
         shell: bash
