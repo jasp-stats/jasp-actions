@@ -261,3 +261,12 @@ jobs:
       - name: Run unit tests
         run: source("tests/testthat.R")
         shell: Rscript {0}
+
+      - name: Upload snapshot diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-diffs
+          path: |
+            tests/testthat/_snaps/**/*.new.svg
+          if-no-files-found: ignore
