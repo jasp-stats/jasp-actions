@@ -2,9 +2,8 @@ name: Reusable Auto-bump Version
 
 on:
   workflow_call: 
-    inputs:                            
-      token_to_use:            
-        type: string                   
+    secrets:
+      BUMP_TOKEN:
         required: false                     
 
 jobs:
@@ -14,10 +13,10 @@ jobs:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6 
         with:
           fetch-depth: 2 
-          token: ${{ inputs.token_to_use || github.token }}
+          token: ${{ secrets.BUMP_TOKEN || github.token }}
 
       - name: Calculate and Update Version
         id: calc
