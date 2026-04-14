@@ -1,0 +1,55 @@
+name: Reusable renv Updater
+
+on:
+  workflow_call:
+    secrets:
+      AUTO_MERGE_TOKEN:
+        required: false
+
+jobs:
+  update-renv:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          token: ${{ github.token }}
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true 
+
+      - name: Install jaspModuleTools and run updateLockfile
+        env:
+          GITHUB_PAT: ${{ github.token }}
+        run: |
+          Rscript -e 'install.packages("remotes")'
+          Rscript -e 'remotes::install_github("jasp-stats/jaspModuleTools")'
+          Rscript -e 'jaspModuleTools::updateLockfile("./")'
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v8 
+        with:
+          token: ${{ secrets.AUTO_MERGE_TOKEN || github.token }}
+          commit-message: "chore: update renv.lock"
+          branch: "chore/update-renv"
+          delete-branch: true
+          title: "chore: update renv.lock dependencies"
+          body: |
+            Automated PR to update `renv.lock` using `jaspModuleTools::updateLockfile()`.
+            This PR is set to auto-merge once all required CI checks pass.
+
+      - name: Enable Pull Request Automerge
+        if: steps.cpr.outputs.pull-request-operation == 'created'
+        env:
+          GH_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "No AUTO_MERGE_TOKEN provided (likely a fork). Skipping auto-merge."
+            exit 0
+          fi
+          
+          gh pr merge --auto --squash "${{ steps.cpr.outputs.pull-request-number }}"
