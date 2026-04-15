@@ -42,6 +42,16 @@ jobs:
             Automated PR to update `renv.lock` using `jaspModuleTools::updateLockfile()`.
             This PR is set to auto-merge once all required CI checks pass.
 
+
+      - name: Auto-Approve PR
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          # We explicitly use the default token here!
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Approving PR to satisfy branch protection rules..."
+          gh pr review --approve "${{ steps.cpr.outputs.pull-request-number }}" -b "🤖 Auto-approved"
+
       - name: Enable Pull Request Automerge
         if: steps.cpr.outputs.pull-request-operation == 'created'
         env:
