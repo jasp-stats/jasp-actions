@@ -1,10 +1,9 @@
 name: Reusable Auto-bump Version
-
 on:
-  workflow_call: 
+  workflow_call:
     secrets:
       BUMP_TOKEN:
-        required: false                     
+        required: false 
 
 jobs:
   bump-version:
@@ -22,21 +21,32 @@ jobs:
         id: calc
         run: |
           # Default to not skipping
-          echo "SKIP_BUMP=false" >> "$GITHUB_ENV"
-          
+          echo "SKIP_BUMP=false" >> "$GITHUB_ENV" 
+
+          # 0. Check if ONLY .po files were changed
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD 2>/dev/null || true)
+          if [ -n "$CHANGED_FILES" ]; then
+            # If grep can't find any file that DOES NOT end in .po, then ONLY .po files changed
+            if ! echo "$CHANGED_FILES" | grep -q -v '\.po$'; then
+              echo "Only .po files were changed. Skipping version bump."
+              echo "SKIP_BUMP=true" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          fi
+
           # 1. Extract version from current commit
-          RAW_VERSION=$(grep -i "^Version:" DESCRIPTION | awk '{print $2}' | tr -d '\r')
-          
+          RAW_VERSION=$(grep -i "^Version:" DESCRIPTION | awk '{print $2}' | tr -d '\r') 
+
           # 2. STRICT FORMAT CHECK: Must be exactly x.y.z (numbers only)
           if [[ ! "$RAW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "❌ ERROR: Version '$RAW_VERSION' is not in strictly x.y.z format."
             echo "Failing workflow to prevent malformed versioning."
             exit 1
-          fi
-          
+          fi 
+
           # 3. Get version from previous commit safely
-          OLD_ON_BRANCH=$(git show HEAD^:DESCRIPTION 2>/dev/null | grep -i "^Version:" | awk '{print $2}' | tr -d '\r' || true)
-          
+          OLD_ON_BRANCH=$(git show HEAD^:DESCRIPTION 2>/dev/null | grep -i "^Version:" | awk '{print $2}' | tr -d '\r' || true) 
+
           # 4. Do nothing if manual change is detected
           if [ "$RAW_VERSION" != "$OLD_ON_BRANCH" ] && [ -n "$OLD_ON_BRANCH" ]; then
             echo "Manual version bump detected ($OLD_ON_BRANCH -> $RAW_VERSION). Doing nothing."
@@ -48,16 +58,15 @@ jobs:
           IFS='.' read -r -a PARTS <<< "$RAW_VERSION"
           X=${PARTS[0]}
           Y=${PARTS[1]}
-          Z=${PARTS[2]}
-          
+          Z=${PARTS[2]} 
           Z=$((Z + 1))
-          NEW_VERSION="$X.$Y.$Z"
-          
-          echo "Bumping version from $RAW_VERSION to $NEW_VERSION"
-          
+          NEW_VERSION="$X.$Y.$Z" 
+
+          echo "Bumping version from $RAW_VERSION to $NEW_VERSION" 
+
           # 6. Write to file (safely overwrites whatever comes after "Version: ")
-          sed -i "s/^Version:.*/Version: $NEW_VERSION/i" DESCRIPTION
-          
+          sed -i "s/^Version:.\*/Version: $NEW_VERSION/i" DESCRIPTION 
+
           # Export for next step
           echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
 
@@ -65,10 +74,10 @@ jobs:
         if: env.SKIP_BUMP == 'false'
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          git add DESCRIPTION
-          
+          git config --local user.name "github-actions[bot]" 
+
+          git add DESCRIPTION 
+
           if ! git diff-index --quiet HEAD; then
             git commit -m "chore: auto-bump version to ${{ env.NEW_VERSION }} [skip ci]"
             git push
