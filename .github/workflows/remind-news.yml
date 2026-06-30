@@ -6,6 +6,7 @@ on:
 jobs:
   remind-news:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login != 'weblate'   # Don't work on translate PR.
     permissions:
       pull-requests: write # Required so the bot can leave a comment
     steps:
