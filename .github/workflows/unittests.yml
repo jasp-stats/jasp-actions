@@ -86,7 +86,7 @@ jobs:
           type: full
 
       - name: Install system dependencies on macOS specific to R devel
-        if: runner.os == 'macOS' && matrix.r == 'devel'
+        if: runner.os == 'macOS'
         run: |
           # ragg                                          requires harfbuzz fribidi
           # The dependencies of the two R packages below are required for compiling from source on Ubuntu, but macOS seems fine without them
