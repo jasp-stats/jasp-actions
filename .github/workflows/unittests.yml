@@ -37,62 +37,47 @@ jobs:
   unit-tests:
     needs: scheduled-run-check
     if: needs.scheduled-run-check.outputs.status == 'success'
-
+    
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} (R ${{ matrix.r }} - ${{ matrix.packages }} packages)
-    continue-on-error: ${{ matrix.packages == 'latest' }}
-
+    name: ${{ matrix.os }} (R ${{ matrix.r }})
+    
     strategy:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
         r: ['4.5.2']
-        packages: [lockfile]
-        include:
-        - os: ubuntu-latest
-          r: '4.5.2'
-          packages: latest
 
     env:
-      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
-      R_REMOTES_UPGRADE: never
-      VDIFFR_RUN_TESTS: true
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      RENV_CONFIG_INSTALL_JOBS: 1
-      RENV_CONFIG_INSTALL_STAGED: false
-      RENV_CONFIG_REPOS_OVERRIDE: https://packagemanager.posit.co/cran/latest
-      RENV_CONFIG_PAK_ENABLED: false
-      RENV_CONFIG_INSTALL_VERBOSE: true
-      PKG_BUILD_CORES: 1    
-      PAK_CORES: 1                  
-      _R_CHECK_LENGTH_1_CONDITION_: TRUE
-      _R_CHECK_MATRIX_DATA_: TRUE
+      RENV_CONFIG_INSTALL_PROMPT: false
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout PR Branch
+        uses: actions/checkout@v6
 
-      - uses: r-lib/actions/setup-r@v2
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
         with:
           r-version: ${{ matrix.r }}
           Ncpus: 1
 
+      - name: Install system dependencies on macOS
+        if: runner.os == 'macOS'
+        uses: r-hub/actions/setup-r-sysreqs@v1
+        with:
+          type: full
+
+      # --- JAGS INSTALLATION ---
       - name: Download JAGS and set JAGS_HOME on Windows
         if: runner.os == 'Windows' && inputs.needs_JAGS
         run: |
           beforeR420 <- getRversion() < "4.2.0"
-          jagsUrl <- if (beforeR420) {
-            'https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip'
-          } else {
-            'https://static.jasp-stats.org/development/JAGS-4.3.1-Windows.zip'
-          }
-          destfile <- 'JAGS-Windows.zip'
-          download.file(jagsUrl, destfile = destfile)
-          unzip(destfile, exdir = 'JAGS')
-          con <- file(description = Sys.getenv("GITHUB_ENV"), open = "a")
-          on.exit(close(con))
-          jagsHome <- jagsRoot <- normalizePath("JAGS", winslash = "/")
-          cat("JAGS_HOME=", jagsHome, "\n", sep = "", file = con)
-          cat("JAGS_ROOT=", jagsRoot, "\n", sep = "", file = con)
+          jagsUrl <- if (beforeR420) { 'https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip' } else { 'https://static.jasp-stats.org/development/JAGS-4.3.1-Windows.zip' }
+          download.file(jagsUrl, destfile = 'JAGS-Windows.zip')
+          unzip('JAGS-Windows.zip', exdir = 'JAGS')
+          jagsRoot <- normalizePath("JAGS", winslash = "/")
+          cat("JAGS_HOME=", jagsRoot, "\n", sep = "", file = file(Sys.getenv("GITHUB_ENV"), "a"))
+          cat("JAGS_ROOT=", jagsRoot, "\n", sep = "", file = file(Sys.getenv("GITHUB_ENV"), "a"))
         working-directory: ..
         shell: Rscript {0}
 
@@ -100,102 +85,52 @@ jobs:
         if: runner.os == 'macOS' && inputs.needs_JAGS
         run: |
           brew install jags
-          brew info jags
           JAGS_PREFIX=$(brew --prefix jags)
-          echo "JAGS installed at: $JAGS_PREFIX"
           sudo mkdir -p /usr/local/lib
           sudo ln -sf "${JAGS_PREFIX}/lib/libjags."*.dylib /usr/local/lib/
           sudo ln -sf "${JAGS_PREFIX}/lib/libjrmath."*.dylib /usr/local/lib/
-          if [ -d "${JAGS_PREFIX}/lib/JAGS" ]; then
-            sudo ln -sfn "${JAGS_PREFIX}/lib/JAGS" /usr/local/lib/JAGS
-          fi
-          ls -l /usr/local/lib/libjags*.dylib
-          ls -l /usr/local/lib/libjrmath*.dylib
+          if [ -d "${JAGS_PREFIX}/lib/JAGS" ]; then sudo ln -sfn "${JAGS_PREFIX}/lib/JAGS" /usr/local/lib/JAGS; fi
         shell: bash
-
-      - name: Set RENV_PATHS_ROOT
-        if: matrix.packages == 'lockfile'
-        shell: bash
-        run: |
-          echo "RENV_PATHS_ROOT=${{ runner.temp }}/renv" >> $GITHUB_ENV
-          echo "R_PKG_CACHE_DIR=${{ runner.temp }}/pkgcache" >> $GITHUB_ENV
-      
-      - name: Install System Dependencies (Cross-Platform)
-        if: matrix.packages == 'lockfile'
-        shell: bash
-        run: |
-          echo "::group::Bootstrapping pak and renv for sysreq generation"
-          # Install renv normally
-          Rscript -e 'install.packages("renv", repos = "https://packagemanager.posit.co/cran/latest")'
-          # Install pak using the official r-lib binary repository to bypass source compilation
-          Rscript -e 'install.packages("pak", repos = sprintf("https://r-lib.github.io/p/pak/stable/%s/%s/%s", .Platform$pkgType, R.Version()$os, R.Version()$arch))'
-          echo "::endgroup::"
-
-          echo "::group::Generating OS-specific installation script"
-          Rscript -e '
-            lf <- renv::lockfile_read("renv.lock")
-            pkgs <- vapply(lf$Packages, function(x) {
-              if (x$Source == "GitHub") paste0(x$RemoteUsername, "/", x$RemoteRepo) else x$Package
-            }, character(1L))
-            
-            pkgs <- union(pkgs, "jasp-stats/jaspTools")
-            
-            sysreqs <- pak::pkg_sysreqs(pkgs)
-            writeLines(sysreqs$install_scripts, "install_sysreqs.sh")
-          '
-          echo "::endgroup::"
-
-          echo "::group::Executing system installation script"
-          if [ -s install_sysreqs.sh ]; then
-            cat install_sysreqs.sh
-            chmod +x install_sysreqs.sh
-            
-            if [ "$RUNNER_OS" == "Linux" ]; then
-              sudo ./install_sysreqs.sh
-            elif [ "$RUNNER_OS" == "macOS" ]; then
-              ./install_sysreqs.sh
-              # Force link curl so macOS compilers can find it
-              brew link --force curl || true
-            else
-              echo "Windows detected, skipping sysreqs execution."
-            fi
-          else
-            echo "No system requirements detected."
-          fi
-          echo "::endgroup::"
-
-      - uses: r-lib/actions/setup-renv@v2
-        if: matrix.packages == 'lockfile'
-        with:
-          cache-version: 7
-
-      - name: Install jaspTools if missing from lockfile
-        if: matrix.packages == 'lockfile'
-        run: |
-          if (!requireNamespace("jaspTools", quietly = TRUE)) renv::install("jasp-stats/jaspTools")
-        shell: Rscript {0}
-
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        if: matrix.packages == 'latest'
-        with:
-          extra-packages: |
-            any::rcmdcheck
-            github::jasp-stats/jaspTools
-          needs: check
-          cache-version: 3
 
       - name: Install JAGS on Linux
         if: runner.os == 'Linux' && inputs.needs_JAGS
-        run: sudo apt install jags
+        run: sudo apt-get update && sudo apt-get install -y jags
         shell: bash
 
-      - name: Setup jaspTools
+      # --- JASP NATIVE ENVIRONMENT SETUP ---
+      - name: Install jaspModuleTools
         run: |
-          jaspTools::setupJaspTools()
+          install.packages("remotes", repos = "https://packagemanager.posit.co/cran/latest")
+          remotes::install_github("jasp-stats/jaspModuleTools")
         shell: Rscript {0}
 
+      - name: Compile Environment via Remote Cellar
+        run: |
+          # Uses all JASP defaults (including the default repo name). 
+          # We only override createBundle since we just need the environment for testing.
+          jaspModuleTools::compile(
+            moduledir = getwd(),
+            workdir = file.path(getwd(), "jasp_workdir"),
+            createBundle = FALSE
+          )
+        shell: Rscript {0}
+
+      # --- RUN TESTS AGAINST COMPILED ENVIRONMENT ---
       - name: Run unit tests
-        run: source("tests/testthat.R")
+        run: |
+          module_name <- basename(getwd())
+          jasp_lib_path <- file.path(getwd(), "jasp_workdir", module_name)
+          
+          # Force R to use the newly compiled JASP library
+          .libPaths(c(jasp_lib_path, .libPaths()))
+          
+          # Install testing tools into the JASP library if missing
+          if (!requireNamespace("testthat", quietly = TRUE)) install.packages("testthat", lib = jasp_lib_path, repos = "https://packagemanager.posit.co/cran/latest")
+          if (!requireNamespace("jaspTools", quietly = TRUE)) remotes::install_github("jasp-stats/jaspTools", lib = jasp_lib_path)
+          
+          # Setup and execute tests
+          jaspTools::setupJaspTools()
+          source("tests/testthat.R")
         shell: Rscript {0}
 
       - name: Upload snapshot diffs
