@@ -65,6 +65,7 @@ jobs:
       RENV_CONFIG_INSTALL_STAGED: false
       RENV_CONFIG_REPOS_OVERRIDE: https://packagemanager.posit.co/cran/latest
       RENV_CONFIG_PAK_ENABLED: false
+      RENV_CONFIG_INSTALL_VERBOSE: true
       PKG_BUILD_CORES: 1    
       PAK_CORES: 1                  
       _R_CHECK_LENGTH_1_CONDITION_: TRUE #deprecated from R 4.2.0
