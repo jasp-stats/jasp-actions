@@ -119,13 +119,16 @@ jobs:
         run: |
           echo "RENV_PATHS_ROOT=${{ runner.temp }}/renv" >> $GITHUB_ENV
           echo "R_PKG_CACHE_DIR=${{ runner.temp }}/pkgcache" >> $GITHUB_ENV
-
+      
       - name: Install System Dependencies (Cross-Platform)
         if: matrix.packages == 'lockfile'
         shell: bash
         run: |
           echo "::group::Bootstrapping pak and renv for sysreq generation"
-          Rscript -e 'install.packages(c("pak", "renv"), repos = "https://packagemanager.posit.co/cran/latest", quiet = TRUE)'
+          # Install renv normally
+          Rscript -e 'install.packages("renv", repos = "https://packagemanager.posit.co/cran/latest")'
+          # Install pak using the official r-lib binary repository to bypass source compilation
+          Rscript -e 'install.packages("pak", repos = sprintf("https://r-lib.github.io/p/pak/stable/%s/%s/%s", .Platform$pkgType, R.Version()$os, R.Version()$arch))'
           echo "::endgroup::"
 
           echo "::group::Generating OS-specific installation script"
