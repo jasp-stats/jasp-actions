@@ -20,11 +20,9 @@ on:
 
 jobs:
   scheduled-run-check:
-
     runs-on: ubuntu-latest
     outputs:
       status: ${{ steps.check.outputs.status }}
-
     steps:
     - id: check
       name: Check for a scheduled run
@@ -37,7 +35,6 @@ jobs:
       shell: bash
 
   unit-tests:
-
     needs: scheduled-run-check
     if: needs.scheduled-run-check.outputs.status == 'success'
 
@@ -68,8 +65,8 @@ jobs:
       RENV_CONFIG_INSTALL_VERBOSE: true
       PKG_BUILD_CORES: 1    
       PAK_CORES: 1                  
-      _R_CHECK_LENGTH_1_CONDITION_: TRUE #deprecated from R 4.2.0
-      _R_CHECK_MATRIX_DATA_: TRUE # only works from R 4.2.0 onwards
+      _R_CHECK_LENGTH_1_CONDITION_: TRUE
+      _R_CHECK_MATRIX_DATA_: TRUE
 
     steps:
       - uses: actions/checkout@v6
@@ -79,129 +76,43 @@ jobs:
           r-version: ${{ matrix.r }}
           Ncpus: 1
 
-      - name: Install system dependencies on macOS
-        if: runner.os == 'macOS'
-        uses: r-hub/actions/setup-r-sysreqs@v1
-        with:
-          type: full
-
-      - name: Install system dependencies on macOS specific to R devel
-        if: runner.os == 'macOS'
-        run: |
-          # ragg                                          requires harfbuzz fribidi
-          # The dependencies of the two R packages below are required for compiling from source on Ubuntu, but macOS seems fine without them
-          # credentials   (dependency of usethis)         requires libgit2
-          # curl          (dependency of usethis)         requires openssl
-
-          brew install harfbuzz fribidi libgit2 openssl curl libpng
-        shell: bash
-
       - name: Download JAGS and set JAGS_HOME on Windows
         if: runner.os == 'Windows' && inputs.needs_JAGS
         run: |
           beforeR420 <- getRversion() < "4.2.0"
-
           jagsUrl <- if (beforeR420) {
             'https://static.jasp-stats.org/development/JAGS-4.3.0-Windows.zip'
           } else {
             'https://static.jasp-stats.org/development/JAGS-4.3.1-Windows.zip'
           }
-
           destfile <- 'JAGS-Windows.zip'
           download.file(jagsUrl, destfile = destfile)
           unzip(destfile, exdir = 'JAGS')
-
           con <- file(description = Sys.getenv("GITHUB_ENV"), open = "a")
           on.exit(close(con))
-
           jagsHome <- jagsRoot <- normalizePath("JAGS", winslash = "/")
           cat("JAGS_HOME=", jagsHome, "\n", sep = "", file = con)
           cat("JAGS_ROOT=", jagsRoot, "\n", sep = "", file = con)
-
         working-directory: ..
         shell: Rscript {0}
 
       - name: Install JAGS on macOS
         if: runner.os == 'macOS' && inputs.needs_JAGS
         run: |
-          # rm '/usr/local/bin/gfortran'
           brew install jags
           brew info jags
-          # Figure out where Homebrew installed JAGS
-          # on arm this is a different location than what the rjags binary expects
           JAGS_PREFIX=$(brew --prefix jags)
           echo "JAGS installed at: $JAGS_PREFIX"
-          # Create /usr/local/lib if needed and link the dylibs
           sudo mkdir -p /usr/local/lib
           sudo ln -sf "${JAGS_PREFIX}/lib/libjags."*.dylib /usr/local/lib/
           sudo ln -sf "${JAGS_PREFIX}/lib/libjrmath."*.dylib /usr/local/lib/
-          # move the modules folder (basemod, etc.) as well
           if [ -d "${JAGS_PREFIX}/lib/JAGS" ]; then
             sudo ln -sfn "${JAGS_PREFIX}/lib/JAGS" /usr/local/lib/JAGS
           fi
-          # check for the moved files
           ls -l /usr/local/lib/libjags*.dylib
           ls -l /usr/local/lib/libjrmath*.dylib
         shell: bash
 
-        # copied from https://github.com/r-lib/actions/blob/6b49fefb2846ed3e5e6e58366e7f7dfe01377f02/setup-r-dependencies/action.yaml#L67
-      - name: Set site library path
-        if: runner.os == 'Linux' && matrix.packages == 'lockfile'
-        run: |
-          # Set site library path
-          cat("::group::Set site library path\n")
-          libpak <- Sys.getenv("R_LIB_FOR_PAK")
-          if (libpak != "") {
-            message("R_LIB_FOR_PAK is already set to ", libpak)
-          }
-          if (Sys.getenv("RENV_PROJECT") != "") {
-            message("renv project detected, no need to set R_LIBS_SITE")
-            if (libpak == "") {
-              cat(sprintf("R_LIB_FOR_PAK=%s\n", .libPaths()[1]), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
-              message("Setting R_LIB_FOR_PAK to ", .libPaths()[1])
-            }
-            q("no")
-          }
-          lib <- Sys.getenv("R_LIBS_SITE")
-          if (lib == "") {
-            lib <- file.path(dirname(.Library), "site-library")
-            cat(sprintf("R_LIBS_SITE=%s\n", lib), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
-            message("Setting R_LIBS_SITE to ", lib)
-            if (libpak == "") {
-              cat(sprintf("R_LIB_FOR_PAK=%s\n", lib), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
-              message("Setting R_LIB_FOR_PAK to ", lib)
-            }
-          } else {
-            message("R_LIBS_SITE is already set to ", lib)
-            if (libpak == "") {
-              plib <- strsplit(lib, .Platform$path.sep)[[1]][[1]]
-              cat(sprintf("R_LIB_FOR_PAK=%s\n", plib), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
-              message("Setting R_LIB_FOR_PAK to ", plib)
-            }
-          }
-          if (nchar("${{ env.R_LIBS_USER && 'ok' || '' }}") == 0) {
-            message("R_LIBS_USER GH env var is unset, setting now: ", Sys.getenv("R_LIBS_USER"))
-            cat(sprintf("R_LIBS_USER=%s\n", Sys.getenv("R_LIBS_USER")), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
-          } else {
-            message("R_LIBS_USER GH env var is already set: ", Sys.getenv("R_LIBS_USER"))
-          }
-          dir.create(Sys.getenv("R_LIBS_SITE"), recursive = TRUE, showWarnings = FALSE)
-          dir.create(Sys.getenv("R_LIBS_USER"), recursive = TRUE, showWarnings = FALSE)
-          cat("::endgroup::\n")
-        shell: Rscript {0}
-
-      - name: Install pak (Unix)
-        if: runner.os == 'Linux' && matrix.packages == 'lockfile'
-        run: |
-          # Install pak
-          echo "::group::Install pak"
-          if which sudo >/dev/null; then SUDO="sudo -E --preserve-env=PATH env"; else SUDO=""; fi
-          $SUDO R -q -e 'dir.create(Sys.getenv("R_LIB_FOR_PAK"), recursive = TRUE, showWarnings = FALSE)'
-          $SUDO R -q -e 'if (FALSE) { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK")) } else { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK"), repos = sprintf("https://r-lib.github.io/p/pak/%s/%s/%s/%s", "stable", .Platform$pkgType, R.Version()$os, R.Version()$arch)) }'
-          echo "::endgroup::"
-        shell: bash
-
-      # adjusted from https://github.com/r-lib/actions/blob/6b49fefb2846ed3e5e6e58366e7f7dfe01377f02/setup-renv/action.yaml#L25-L28
       - name: Set RENV_PATHS_ROOT
         if: matrix.packages == 'lockfile'
         shell: bash
@@ -209,43 +120,56 @@ jobs:
           echo "RENV_PATHS_ROOT=${{ runner.temp }}/renv" >> $GITHUB_ENV
           echo "R_PKG_CACHE_DIR=${{ runner.temp }}/pkgcache" >> $GITHUB_ENV
 
-      - name: Install system dependencies on linux
-        if: runner.os == 'Linux' && matrix.packages == 'lockfile'
+      - name: Install System Dependencies (Cross-Platform)
+        if: matrix.packages == 'lockfile'
+        shell: bash
         run: |
-          install.packages("renv")
-          lib <- Sys.getenv("R_LIB_FOR_PAK")
-          lf <- renv::lockfile_read("renv.lock")
-          # TODO: this should actually use the version from the lockfile as well...
-          # not sure how to do that efficiently though, we could redirect everything to
-          # cran/pkg@version? that would make a ton of github api calls though
-          pkgs <- vapply(lf$Packages,
-               FUN = function(x) {
-                 if (x$Source == "GitHub") {
-                   paste0(x$RemoteUsername, "/", x$RemoteRepo)
-                 } else {
-                   x$Package
-                 }
-               },
-               FUN.VALUE = character(1L)
-          )
-          # add jaspTools manually if missing (it requires libarchive)
-          pkgs <- union(pkgs, "jasp-stats/jaspTools")
-          .libPaths(lib) # make sure pak is found
-          res <- pak::pkg_sysreqs(pkgs, sysreqs_platform = "ubuntu")
-          cmd <- paste("sudo", res$install_scripts)
-          cat(sprintf("Running cmd:\n%s\n", cmd))
-          system(paste("sudo", res$install_scripts))
-        shell: Rscript {0}
+          echo "::group::Bootstrapping pak and renv for sysreq generation"
+          Rscript -e 'install.packages(c("pak", "renv"), repos = "https://packagemanager.posit.co/cran/latest", quiet = TRUE)'
+          echo "::endgroup::"
+
+          echo "::group::Generating OS-specific installation script"
+          Rscript -e '
+            lf <- renv::lockfile_read("renv.lock")
+            pkgs <- vapply(lf$Packages, function(x) {
+              if (x$Source == "GitHub") paste0(x$RemoteUsername, "/", x$RemoteRepo) else x$Package
+            }, character(1L))
+            
+            pkgs <- union(pkgs, "jasp-stats/jaspTools")
+            
+            sysreqs <- pak::pkg_sysreqs(pkgs)
+            writeLines(sysreqs$install_scripts, "install_sysreqs.sh")
+          '
+          echo "::endgroup::"
+
+          echo "::group::Executing system installation script"
+          if [ -s install_sysreqs.sh ]; then
+            cat install_sysreqs.sh
+            chmod +x install_sysreqs.sh
+            
+            if [ "$RUNNER_OS" == "Linux" ]; then
+              sudo ./install_sysreqs.sh
+            elif [ "$RUNNER_OS" == "macOS" ]; then
+              ./install_sysreqs.sh
+              # Force link curl so macOS compilers can find it
+              brew link --force curl || true
+            else
+              echo "Windows detected, skipping sysreqs execution."
+            fi
+          else
+            echo "No system requirements detected."
+          fi
+          echo "::endgroup::"
 
       - uses: r-lib/actions/setup-renv@v2
         if: matrix.packages == 'lockfile'
         with:
-          cache-version: 6
+          cache-version: 7
 
       - name: Install jaspTools if missing from lockfile
         if: matrix.packages == 'lockfile'
         run: |
-          if (!require("jaspTools")) renv::install("jasp-stats/jaspTools")
+          if (!requireNamespace("jaspTools", quietly = TRUE)) renv::install("jasp-stats/jaspTools")
         shell: Rscript {0}
 
       - uses: r-lib/actions/setup-r-dependencies@v2
@@ -276,6 +200,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: snapshot-diffs
-          path: |
-            tests/testthat/_snaps/**/*.new.svg
+          path: tests/testthat/_snaps/**/*.new.svg
           if-no-files-found: ignore
