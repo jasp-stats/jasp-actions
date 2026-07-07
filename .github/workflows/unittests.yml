@@ -209,10 +209,15 @@ jobs:
           echo "RENV_PATHS_ROOT=${{ runner.temp }}/renv" >> $GITHUB_ENV
           echo "R_PKG_CACHE_DIR=${{ runner.temp }}/pkgcache" >> $GITHUB_ENV
 
+      - name: Install renv
+        run: |
+          install.packages("renv")
+          renv::install("rstudio/renv@44b3f47219d103b866c44fcff61e3d81e1b6cb9f")
+        shell: Rscript {0}
+
       - name: Install system dependencies on linux
         if: runner.os == 'Linux' && matrix.packages == 'lockfile'
         run: |
-          install.packages("renv")
           lib <- Sys.getenv("R_LIB_FOR_PAK")
           lf <- renv::lockfile_read("renv.lock")
           # TODO: this should actually use the version from the lockfile as well...
