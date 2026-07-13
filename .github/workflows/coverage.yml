@@ -8,6 +8,11 @@ on:
         required: false
         type: boolean
         default: false
+      needs_igraph:
+        description: '(Linux only) Should igraph be recompiled?'
+        required: false
+        type: boolean
+        default: false
       continue_on_schedule:
         description: 'Should the workflow also be run on a schedule? By default (false), this only happens when the github.repository_owner is jasp-stats.'
         type: boolean
@@ -42,7 +47,8 @@ jobs:
       RENV_CONFIG_INSTALL_JOBS: 1
       RENV_CONFIG_INSTALL_STAGED: false
       RENV_CONFIG_REPOS_OVERRIDE: https://packagemanager.posit.co/cran/latest
-      RENV_CONFIG_PAK_ENABLED: true
+      RENV_CONFIG_PAK_ENABLED: false #true
+      RENV_CONFIG_INSTALL_VERBOSE: true
       PKG_BUILD_CORES: 1
       PAK_CORES: 1
       _R_CHECK_LENGTH_1_CONDITION_: TRUE # deprecated from R 4.2.0
@@ -118,9 +124,14 @@ jobs:
           echo "RENV_PATHS_ROOT=${{ runner.temp }}/renv" >> $GITHUB_ENV
           echo "R_PKG_CACHE_DIR=${{ runner.temp }}/pkgcache" >> $GITHUB_ENV
 
-      - name: Install system dependencies on linux
+      - name: Install renv
         run: |
           install.packages("renv")
+          renv::install("rstudio/renv@44b3f47219d103b866c44fcff61e3d81e1b6cb9f")
+        shell: Rscript {0}
+
+      - name: Install system dependencies on linux
+        run: |
           lib <- Sys.getenv("R_LIB_FOR_PAK")
           lf <- renv::lockfile_read("renv.lock")
           # TODO: this should actually use the version from the lockfile as well...
