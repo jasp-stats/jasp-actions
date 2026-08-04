@@ -3,7 +3,7 @@
 MODULE_NAMES=${1:-"jaspTestModule"}
 MODULE_NAMES=$(echo $MODULE_NAMES | cut -d'/' -f 2)
 PATH_TO_R_FILE=$2
-LANGUAGE_CODES=${3:-"de es eu fr gl fa id it ja mk nl pl pt ru sr ta tr zh_Hans zh_Hant"}
+LANGUAGE_CODES=${3:-"ar bo de es eu fa fr gl hu id it ja mk nl pl pt ru sr ta tr zh_Hans zh_Hant"}
 
 create_file_if_it_doesnt_exist() {
 	if [ ! -f "$1" ]; then
