@@ -4,6 +4,33 @@
 #
 # Needs jaspSyntax and roxygen2. The module's own dependencies are not needed: roxygen runs on a throwaway package
 # that only holds the wrapper files, so the module code is never loaded.
+#
+# jaspSyntax is only called in child R processes, one per analysis. Creating several analysis forms in one process
+# can crash in the QML garbage collector (seen on Linux with jaspDescriptives), and some modules crash R when it
+# exits. A child reports through a result file, so a crash after the wrapper is written does not count as a failure.
+
+rscript <- file.path(R.home("bin"), "Rscript")
+
+# Runs `code` in a child R process; `code` can write its result to the file named by `resultFile`.
+runBridge <- function(code) {
+  resultFile <- tempfile("result")
+  script     <- tempfile("bridge", fileext = ".R")
+  writeLines(c(sprintf("resultFile <- %s", deparse(resultFile)), code), script)
+
+  output <- suppressWarnings(system2(rscript, shQuote(script), stdout = TRUE, stderr = TRUE))
+  status <- attr(output, "status")
+
+  list(
+    output = output,
+    status = if (is.null(status)) 0L else status,
+    result = if (file.exists(resultFile)) readLines(resultFile, warn = FALSE) else NULL
+  )
+}
+
+showOutput <- function(run) {
+  noise <- "GridLayout is too large|Binding loop detected|TabBar.qml"
+  message(paste(utils::tail(grep(noise, run[["output"]], value = TRUE, invert = TRUE), 30L), collapse = "\n"))
+}
 
 args      <- commandArgs(trailingOnly = TRUE)
 moduleDir <- normalizePath(if (length(args) > 0L) args[[1L]] else ".", mustWork = TRUE)
@@ -30,24 +57,46 @@ if (basename(moduleDir) != packageName) {
     stop("Could not link ", moduleDir, " as ", modulePath)
 }
 
-moduleInfo <- jaspSyntax::parseDescription(modulePath)
-if (!isTRUE(moduleInfo[["hasWrappers"]])) {
+run <- runBridge(sprintf(paste(
+  "info <- jaspSyntax::parseDescription(%s)",
+  "analyses <- vapply(info[['analyses']], function(analysis) analysis[['name']], character(1L))",
+  "writeLines(c(as.character(isTRUE(info[['hasWrappers']])), analyses), resultFile)",
+  sep = "\n"), deparse(modulePath)))
+if (is.null(run[["result"]])) {
+  showOutput(run)
+  stop("Reading inst/Description.qml of ", packageName, " failed (exit status ", run[["status"]], ").")
+}
+if (run[["result"]][[1L]] != "TRUE") {
   message(packageName, " does not set hasWrappers in inst/Description.qml, nothing to do.")
   quit(save = "no", status = 0L)
 }
+analyses <- run[["result"]][-1L]
 
 rDir             <- file.path(moduleDir, "R")
 existingWrappers <- list.files(rDir, pattern = "Wrapper\\.R$")
 
-result <- jaspSyntax::generateModuleWrappers(modulePath)
-if (!identical(result, "Wrappers generated"))
-  stop("Generating the wrappers of ", packageName, " failed: ", result)
+failed <- character()
+for (analysis in analyses) {
+  run <- runBridge(sprintf(
+    "writeLines(jaspSyntax::generateAnalysisWrapper(%s, %s), resultFile)", deparse(modulePath), deparse(analysis)))
+  result <- paste(run[["result"]], collapse = " ")
+
+  if (startsWith(result, "Wrapper generated")) {
+    message(result, if (run[["status"]] != 0L) sprintf(" (R then exited with status %d, ignored)", run[["status"]]))
+  } else {
+    showOutput(run)
+    message("Generating the wrapper of ", analysis, " failed (exit status ", run[["status"]], "): ", result)
+    failed <- c(failed, analysis)
+  }
+}
+if (length(failed) > 0L)
+  stop("Generating the wrappers of ", packageName, " failed for: ", paste(failed, collapse = ", "))
 
 # The generator writes R/<analysis>Wrapper.R, but older wrappers may differ in case (e.g. ttestonesampleWrapper.R).
 # A case-insensitive file system (macOS) writes into the existing file; on Linux both would exist and define the
 # analysis twice, so move the generated code into the existing file.
-for (analysis in moduleInfo[["analyses"]]) {
-  generated <- paste0(analysis[["name"]], "Wrapper.R")
+for (analysis in analyses) {
+  generated <- paste0(analysis, "Wrapper.R")
   existing  <- existingWrappers[tolower(existingWrappers) == tolower(generated) & existingWrappers != generated]
   if (length(existing) == 1L && generated %in% list.files(rDir) && existing %in% list.files(rDir)) {
     file.copy(file.path(rDir, generated), file.path(rDir, existing), overwrite = TRUE)
