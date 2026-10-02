@@ -36,9 +36,24 @@ if (!isTRUE(moduleInfo[["hasWrappers"]])) {
   quit(save = "no", status = 0L)
 }
 
+rDir             <- file.path(moduleDir, "R")
+existingWrappers <- list.files(rDir, pattern = "Wrapper\\.R$")
+
 result <- jaspSyntax::generateModuleWrappers(modulePath)
 if (!identical(result, "Wrappers generated"))
   stop("Generating the wrappers of ", packageName, " failed: ", result)
+
+# The generator writes R/<analysis>Wrapper.R, but older wrappers may differ in case (e.g. ttestonesampleWrapper.R).
+# A case-insensitive file system (macOS) writes into the existing file; on Linux both would exist and define the
+# analysis twice, so move the generated code into the existing file.
+for (analysis in moduleInfo[["analyses"]]) {
+  generated <- paste0(analysis[["name"]], "Wrapper.R")
+  existing  <- existingWrappers[tolower(existingWrappers) == tolower(generated) & existingWrappers != generated]
+  if (length(existing) == 1L && generated %in% list.files(rDir) && existing %in% list.files(rDir)) {
+    file.copy(file.path(rDir, generated), file.path(rDir, existing), overwrite = TRUE)
+    file.remove(file.path(rDir, generated))
+  }
+}
 
 wrapperFiles <- list.files(file.path(moduleDir, "R"), pattern = "Wrapper\\.R$", full.names = TRUE)
 message("Generated ", length(wrapperFiles), " wrapper(s) for ", packageName)
