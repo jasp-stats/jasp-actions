@@ -1,0 +1,76 @@
+name: Reusable Update R Wrappers
+
+# Regenerates a module's R wrappers (R/*Wrapper.R) and their help files (man/*.Rd) from its QML forms,
+# and pushes them to the branch that triggered the run when they changed.
+
+on:
+  workflow_call:
+    inputs:
+      jaspsyntax_ref:
+        description: 'jaspSyntax branch, tag or SHA to install.'
+        type: string
+        required: false
+        default: 'master'
+      syntaxinterface_release:
+        description: 'jaspSyntax release whose pre-built SyntaxInterface library is used. Empty means the default of that jaspSyntax version.'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      BUMP_TOKEN:
+        description: 'Token allowed to push to a protected branch. Without it the GITHUB_TOKEN is used.'
+        required: false
+
+jobs:
+  update-wrappers:
+    # Forks inherit the caller workflow, but should only push wrapper commits when asked to
+    if: github.repository_owner == 'jasp-stats' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: update-wrappers-${{ github.repository }}-${{ github.ref }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.BUMP_TOKEN || github.token }}
+
+      - name: Update the wrappers
+        uses: jasp-stats/jasp-actions/update-wrappers@master
+        with:
+          jaspsyntax-ref: ${{ inputs.jaspsyntax_ref }}
+          syntaxinterface-release: ${{ inputs.syntaxinterface_release }}
+
+      - name: Commit and push
+        run: |
+          paths=(R)
+          [ -d man ] && paths+=(man)
+
+          if [ -z "$(git status --porcelain -- "${paths[@]}")" ]; then
+            echo "The wrappers are up to date."
+            exit 0
+          fi
+
+          git status --short -- "${paths[@]}"
+
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add --all -- "${paths[@]}"
+          # [skip ci] so this commit does not start the version bump and the unit tests again
+          git commit -m "chore: update R wrappers and help files [skip ci]"
+
+          # Another workflow (e.g. the version bump) may have pushed in the meantime: those touch other files, so rebase
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "Pushed the updated wrappers."
+              exit 0
+            fi
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+          done
+
+          echo "::error::Could not push the updated wrappers to ${GITHUB_REF_NAME}."
+          exit 1
+        shell: bash

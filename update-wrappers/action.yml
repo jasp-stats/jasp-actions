@@ -1,0 +1,56 @@
+name: 'Update the R wrappers of a JASP module'
+description: 'Installs jaspSyntax with its pre-built SyntaxInterface library, then regenerates R/*Wrapper.R and their man/*.Rd files from the QML forms. Runs on Ubuntu 24.04 only.'
+inputs:
+  module-path:
+    description: 'Path to the module checkout.'
+    required: false
+    default: '.'
+  jaspsyntax-ref:
+    description: 'jaspSyntax branch, tag or SHA to install.'
+    required: false
+    default: 'master'
+  syntaxinterface-release:
+    description: 'jaspSyntax release whose pre-built SyntaxInterface library is used. Empty means the default of that jaspSyntax version.'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check the runner
+      run: |
+        # The Linux SyntaxInterface library is built on ubuntu-latest and links that release's ICU (libicu74).
+        if [ "${{ runner.os }}" != 'Linux' ] || ! grep -q 'VERSION_ID="24.04"' /etc/os-release; then
+          echo "::error::update-wrappers needs an ubuntu-24.04 runner, the pre-built SyntaxInterface library is built for it."
+          exit 1
+        fi
+      shell: bash
+
+    - name: Install the libraries SyntaxInterface links to
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends \
+          libopengl0 libegl1 libmysqlclient21 libpq5 libarchive13t64 libicu74 libpcre2-16-0 libpng16-16t64 libjpeg8 libzstd1
+      shell: bash
+
+    - name: Set up R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: 'release'
+        use-public-rspm: true
+
+    - name: Install jaspSyntax and roxygen2
+      env:
+        GITHUB_PAT: ${{ github.token }}
+        JASPSYNTAX_RELEASE_TAG: ${{ inputs.syntaxinterface-release }}
+      run: |
+        # An empty JASPSYNTAX_RELEASE_TAG would override jaspSyntax's own default with nothing.
+        if (!nzchar(Sys.getenv("JASPSYNTAX_RELEASE_TAG"))) Sys.unsetenv("JASPSYNTAX_RELEASE_TAG")
+        install.packages(c("remotes", "roxygen2"))
+        remotes::install_github("jasp-stats/jaspSyntax@${{ inputs.jaspsyntax-ref }}", upgrade = "never")
+        library(jaspSyntax)
+      shell: Rscript {0}
+
+    - name: Generate the wrappers and their help files
+      run: Rscript "${{ github.action_path }}/updateWrappers.R" "${{ inputs.module-path }}"
+      shell: bash
