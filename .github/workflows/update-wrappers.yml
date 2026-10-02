@@ -20,9 +20,6 @@ on:
       PUSH_TOKEN:
         description: 'Token allowed to push to the protected branch, e.g. secrets.REPOS_KEY. Without it the GITHUB_TOKEN is used, which cannot push to a protected branch.'
         required: false
-      BUMP_TOKEN:
-        description: 'Deprecated, use PUSH_TOKEN. Still used when PUSH_TOKEN is not given, so existing callers keep working.'
-        required: false
 
 jobs:
   update-wrappers:
@@ -51,8 +48,8 @@ jobs:
 
       - name: Commit and push
         env:
-          PUSH_TOKEN: ${{ secrets.PUSH_TOKEN || secrets.BUMP_TOKEN || github.token }}
-          TOKEN_NAME: ${{ secrets.PUSH_TOKEN && 'PUSH_TOKEN' || (secrets.BUMP_TOKEN && 'BUMP_TOKEN' || 'GITHUB_TOKEN') }}
+          PUSH_TOKEN: ${{ secrets.PUSH_TOKEN || github.token }}
+          TOKEN_NAME: ${{ secrets.PUSH_TOKEN && 'PUSH_TOKEN' || 'GITHUB_TOKEN' }}
         run: |
           paths=(R)
           [ -d man ] && paths+=(man)
