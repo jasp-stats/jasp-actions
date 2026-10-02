@@ -17,8 +17,11 @@ on:
         required: false
         default: ''
     secrets:
+      PUSH_TOKEN:
+        description: 'Token allowed to push to the protected branch, e.g. secrets.REPOS_KEY. Without it the GITHUB_TOKEN is used, which cannot push to a protected branch.'
+        required: false
       BUMP_TOKEN:
-        description: 'Token allowed to push to a protected branch. Without it the GITHUB_TOKEN is used.'
+        description: 'Deprecated, use PUSH_TOKEN. Still used when PUSH_TOKEN is not given, so existing callers keep working.'
         required: false
 
 jobs:
@@ -33,10 +36,12 @@ jobs:
       cancel-in-progress: false
 
     steps:
+      # Check out with the GITHUB_TOKEN: the push token is only needed for the push, so a bad one
+      # still lets the wrappers be generated and fails at the push with a clear message.
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          token: ${{ secrets.BUMP_TOKEN || github.token }}
+          persist-credentials: false
 
       - name: Update the wrappers
         uses: jasp-stats/jasp-actions/update-wrappers@master
@@ -45,6 +50,9 @@ jobs:
           syntaxinterface-release: ${{ inputs.syntaxinterface_release }}
 
       - name: Commit and push
+        env:
+          PUSH_TOKEN: ${{ secrets.PUSH_TOKEN || secrets.BUMP_TOKEN || github.token }}
+          TOKEN_NAME: ${{ secrets.PUSH_TOKEN && 'PUSH_TOKEN' || (secrets.BUMP_TOKEN && 'BUMP_TOKEN' || 'GITHUB_TOKEN') }}
         run: |
           paths=(R)
           [ -d man ] && paths+=(man)
@@ -55,6 +63,19 @@ jobs:
           fi
 
           git status --short -- "${paths[@]}"
+          git diff --stat -- "${paths[@]}"
+
+          # A token git cannot use only shows up as "could not read Username", so check it first
+          if ! permissions=$(GH_TOKEN="${PUSH_TOKEN}" gh api "repos/${GITHUB_REPOSITORY}" --jq '.permissions.push // "unknown"' 2>&1); then
+            echo "::error::${TOKEN_NAME} cannot access ${GITHUB_REPOSITORY}, it is probably expired or revoked: ${permissions}"
+            exit 1
+          fi
+          if [ "${permissions}" = "false" ]; then
+            echo "::error::${TOKEN_NAME} has no write access to ${GITHUB_REPOSITORY}."
+            exit 1
+          fi
+
+          remote="https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -64,13 +85,13 @@ jobs:
 
           # Another workflow (e.g. the version bump) may have pushed in the meantime: those touch other files, so rebase
           for attempt in 1 2 3; do
-            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+            if git push "${remote}" "HEAD:${GITHUB_REF_NAME}"; then
               echo "Pushed the updated wrappers."
               exit 0
             fi
-            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git pull --rebase "${remote}" "${GITHUB_REF_NAME}"
           done
 
-          echo "::error::Could not push the updated wrappers to ${GITHUB_REF_NAME}."
+          echo "::error::Could not push the updated wrappers to ${GITHUB_REF_NAME} with ${TOKEN_NAME}. If the branch is protected, the token must be allowed to push to it."
           exit 1
         shell: bash
