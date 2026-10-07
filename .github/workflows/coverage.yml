@@ -40,140 +40,17 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
-      R_REMOTES_UPGRADE: never
-      VDIFFR_RUN_TESTS: true
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      RENV_CONFIG_INSTALL_JOBS: 1
-      RENV_CONFIG_INSTALL_STAGED: false
-      RENV_CONFIG_REPOS_OVERRIDE: https://packagemanager.posit.co/cran/latest
-      RENV_CONFIG_PAK_ENABLED: false #true
-      RENV_CONFIG_INSTALL_VERBOSE: true
-      PKG_BUILD_CORES: 1
-      PAK_CORES: 1
-      _R_CHECK_LENGTH_1_CONDITION_: TRUE # deprecated from R 4.2.0
-      _R_CHECK_MATRIX_DATA_: TRUE        # only works from R 4.2.0 onwards
 
     steps:
       - uses: actions/checkout@v6
 
-      - uses: r-lib/actions/setup-r@v2
+      - name: Set up the test environment
+        uses: jasp-stats/jasp-actions/setup-r-test-env@master
         with:
           r-version: '4.5.2'
-          Ncpus: 1
-
-        # copied from https://github.com/r-lib/actions/blob/6b49fefb2846ed3e5e6e58366e7f7dfe01377f02/setup-r-dependencies/action.yaml#L67
-      - name: Set site library path
-        run: |
-          # Set site library path
-          cat("::group::Set site library path\n")
-          libpak <- Sys.getenv("R_LIB_FOR_PAK")
-          if (libpak != "") {
-            message("R_LIB_FOR_PAK is already set to ", libpak)
-          }
-          if (Sys.getenv("RENV_PROJECT") != "") {
-            message("renv project detected, no need to set R_LIBS_SITE")
-            if (libpak == "") {
-              cat(sprintf("R_LIB_FOR_PAK=%s\n", .libPaths()[1]), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
-              message("Setting R_LIB_FOR_PAK to ", .libPaths()[1])
-            }
-            q("no")
-          }
-          lib <- Sys.getenv("R_LIBS_SITE")
-          if (lib == "") {
-            lib <- file.path(dirname(.Library), "site-library")
-            cat(sprintf("R_LIBS_SITE=%s\n", lib), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
-            message("Setting R_LIBS_SITE to ", lib)
-            if (libpak == "") {
-              cat(sprintf("R_LIB_FOR_PAK=%s\n", lib), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
-              message("Setting R_LIB_FOR_PAK to ", lib)
-            }
-          } else {
-            message("R_LIBS_SITE is already set to ", lib)
-            if (libpak == "") {
-              plib <- strsplit(lib, .Platform$path.sep)[[1]][[1]]
-              cat(sprintf("R_LIB_FOR_PAK=%s\n", plib), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
-              message("Setting R_LIB_FOR_PAK to ", plib)
-            }
-          }
-          if (nchar("${{ env.R_LIBS_USER && 'ok' || '' }}") == 0) {
-            message("R_LIBS_USER GH env var is unset, setting now: ", Sys.getenv("R_LIBS_USER"))
-            cat(sprintf("R_LIBS_USER=%s\n", Sys.getenv("R_LIBS_USER")), file = Sys.getenv("GITHUB_ENV"), append = TRUE)
-          } else {
-            message("R_LIBS_USER GH env var is already set: ", Sys.getenv("R_LIBS_USER"))
-          }
-          dir.create(Sys.getenv("R_LIBS_SITE"), recursive = TRUE, showWarnings = FALSE)
-          dir.create(Sys.getenv("R_LIBS_USER"), recursive = TRUE, showWarnings = FALSE)
-          cat("::endgroup::\n")
-        shell: Rscript {0}
-
-      - name: Install pak (Unix)
-        run: |
-          # Install pak
-          echo "::group::Install pak"
-          if which sudo >/dev/null; then SUDO="sudo -E --preserve-env=PATH env"; else SUDO=""; fi
-          $SUDO R -q -e 'dir.create(Sys.getenv("R_LIB_FOR_PAK"), recursive = TRUE, showWarnings = FALSE)'
-          $SUDO R -q -e 'if (FALSE) { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK")) } else { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK"), repos = sprintf("https://r-lib.github.io/p/pak/%s/%s/%s/%s", "stable", .Platform$pkgType, R.Version()$os, R.Version()$arch)) }'
-          echo "::endgroup::"
-        shell: bash
-        
-      # adjusted from https://github.com/r-lib/actions/blob/6b49fefb2846ed3e5e6e58366e7f7dfe01377f02/setup-renv/action.yaml#L25-L28
-      - name: Set RENV_PATHS_ROOT
-        shell: bash
-        run: |
-          echo "RENV_PATHS_ROOT=${{ runner.temp }}/renv" >> $GITHUB_ENV
-          echo "R_PKG_CACHE_DIR=${{ runner.temp }}/pkgcache" >> $GITHUB_ENV
-
-      - name: Install renv
-        run: |
-          install.packages("renv")
-          renv::install("rstudio/renv@44b3f47219d103b866c44fcff61e3d81e1b6cb9f")
-        shell: Rscript {0}
-
-      - name: Install system dependencies on linux
-        run: |
-          lib <- Sys.getenv("R_LIB_FOR_PAK")
-          lf <- renv::lockfile_read("renv.lock")
-          # TODO: this should actually use the version from the lockfile as well...
-          # not sure how to do that efficiently though, we could redirect everything to
-          # cran/pkg@version? that would make a ton of github api calls though
-          pkgs <- vapply(lf$Packages,
-               FUN = function(x) {
-                 if (x$Source == "GitHub") {
-                   paste0(x$RemoteUsername, "/", x$RemoteRepo)
-                 } else {
-                   x$Package
-                 }
-               },
-               FUN.VALUE = character(1L)
-          )
-          # add jaspTools manually if missing (it requires libarchive)
-          pkgs <- union(pkgs, "jasp-stats/jaspTools")
-          .libPaths(lib) # make sure pak is found
-          res <- pak::pkg_sysreqs(pkgs, sysreqs_platform = "ubuntu")
-          cmd <- paste("sudo", res$install_scripts)
-          cat(sprintf("Running cmd:\n%s\n", cmd))
-          system(paste("sudo", res$install_scripts))
-        shell: Rscript {0}
-
-      - uses: r-lib/actions/setup-renv@v2
-        with:
-          cache-version: 6
-
-      - name: Install jaspTools if missing from lockfile
-        run: |
-          if (!require("jaspTools")) renv::install("jasp-stats/jaspTools")
-        shell: Rscript {0}
-
-      - name: Setup jaspTools
-        run: |
-          jaspTools::setupJaspTools()
-        shell: Rscript {0}
-
-      - name: Install JAGS on Linux
-        if: inputs.needs_JAGS
-        run: sudo apt install jags
-        shell: bash
+          packages: lockfile
+          needs-jags: ${{ inputs.needs_JAGS }}
 
       - name: Install covr if missing from lockfile
         run: |

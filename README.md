@@ -2,6 +2,30 @@
 
 centralized location for custom jasp-actions
 
+## Shared R test setup
+
+Unit tests and coverage both use `setup-r-test-env/action.yml`. Change R/package
+installation, system dependencies, JAGS setup, cache settings, and jaspTools
+setup there so the workflows stay aligned. The action accepts `r-version`,
+`packages` (`lockfile` or `latest`), and `needs-jags` (`true` or `false`).
+Common environment settings are exported through `GITHUB_ENV` and remain
+available to the subsequent test or coverage steps. The caller supplies
+`GITHUB_PAT`; the action does not accept or record credentials.
+
+The workflows retain their own job matrices, schedule checks, unit tests,
+environment artifacts, coverage calculation, and Codecov upload. Coverage
+uses the same Linux/lockfile setup as unit tests, including installing JAGS
+before setting up jaspTools when requested.
+
+Both workflows reference `jasp-stats/jasp-actions/setup-r-test-env@master`,
+following the repository's existing action-reference convention. To test a
+branch before merging, point those two action references at the branch too.
+A relative `uses: ./setup-r-test-env` would look in the calling module's checkout,
+which does not contain this action.
+
+The older `setup-test-env` action remains available for existing callers; it
+does not implement the current lockfile/latest-package setup.
+
 ## Unit-test environment records
 
 `.github/workflows/unittests.yml` records and uploads the actual R environment
