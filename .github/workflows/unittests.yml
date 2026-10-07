@@ -17,6 +17,11 @@ on:
         description: 'Should the workflow also be run on a schedule? By default (false), this only happens when the github.repository_owner is jasp-stats.'
         type: boolean
         default: false
+      environment_retention_days:
+        description: 'Days to retain unit-test environment artifacts (within the caller repository retention limit).'
+        type: number
+        required: false
+        default: 30
 
 jobs:
   scheduled-run-check:
@@ -271,6 +276,71 @@ jobs:
         run: |
           jaspTools::setupJaspTools()
         shell: Rscript {0}
+
+      - name: Record unit-test environment
+        id: record-test-environment
+        continue-on-error: true
+        env:
+          TEST_ENVIRONMENT_DIR: ${{ runner.temp }}/unit-test-environment
+          TEST_MATRIX_OS: ${{ matrix.os }}
+          TEST_MATRIX_R: ${{ matrix.r }}
+          TEST_MATRIX_PACKAGES: ${{ matrix.packages }}
+        run: |
+          out <- Sys.getenv("TEST_ENVIRONMENT_DIR")
+          dir.create(out, recursive = TRUE, showWarnings = FALSE)
+
+          # Keep the first copy of each package: .libPaths() order determines
+          # which installed version R actually finds. Do not read renv.lock
+          # here: latest-package jobs and extra GitHub installs can differ.
+          fields <- c("Repository", "RemoteType", "RemoteHost", "RemoteUsername",
+                      "RemoteRepo", "RemoteRef", "RemoteSha", "GithubSHA1")
+          packages <- installed.packages(lib.loc = .libPaths(), fields = fields,
+                                         noCache = TRUE)
+          packages <- packages[!duplicated(packages[, "Package"]), , drop = FALSE]
+          packages <- packages[order(packages[, "Package"]),
+                               c("Package", "Version", "LibPath", "Built", fields),
+                               drop = FALSE]
+          write.csv(packages, file.path(out, "packages.csv"), row.names = FALSE,
+                    na = "", fileEncoding = "UTF-8")
+
+          # Only explicitly selected metadata is recorded; never dump the
+          # environment, which includes authentication credentials.
+          env_names <- c(
+            repository = "GITHUB_REPOSITORY", commit = "GITHUB_SHA",
+            ref = "GITHUB_REF", event = "GITHUB_EVENT_NAME",
+            run_id = "GITHUB_RUN_ID", run_attempt = "GITHUB_RUN_ATTEMPT",
+            job = "GITHUB_JOB", caller_workflow_ref = "GITHUB_WORKFLOW_REF",
+            caller_workflow_sha = "GITHUB_WORKFLOW_SHA",
+            runner_os = "RUNNER_OS", runner_arch = "RUNNER_ARCH",
+            runner_image = "ImageOS", runner_image_version = "ImageVersion",
+            matrix_os = "TEST_MATRIX_OS", matrix_r = "TEST_MATRIX_R",
+            package_setup = "TEST_MATRIX_PACKAGES"
+          )
+          metadata <- c(
+            schema_version = "1",
+            recorded_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+            r_version = as.character(getRversion()),
+            r_platform = R.version$platform,
+            setNames(Sys.getenv(unname(env_names)), names(env_names))
+          )
+          write.csv(data.frame(key = names(metadata), value = unname(metadata)),
+                    file.path(out, "metadata.csv"), row.names = FALSE,
+                    fileEncoding = "UTF-8")
+          writeLines(c(capture.output(sessionInfo()), "", "External libraries:",
+                       capture.output(extSoftVersion())),
+                     file.path(out, "session-info.txt"), useBytes = TRUE)
+        shell: Rscript {0}
+
+      # Upload before testing, so a test failure or timeout cannot prevent it.
+      - name: Upload unit-test environment
+        if: steps.record-test-environment.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-environment-${{ matrix.os }}-R-${{ matrix.r }}-${{ matrix.packages }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/unit-test-environment/
+          if-no-files-found: error
+          retention-days: ${{ inputs.environment_retention_days }}
 
       - name: Run unit tests
         run: source("tests/testthat.R")

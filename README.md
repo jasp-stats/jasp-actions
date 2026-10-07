@@ -2,6 +2,39 @@
 
 centralized location for custom jasp-actions
 
+## Unit-test environment records
+
+`.github/workflows/unittests.yml` records and uploads the actual R environment
+after `jaspTools::setupJaspTools()` and before running tests. Each matrix job
+uploads `test-environment-<os>-R-<version>-<lockfile|latest>-attempt-<number>`,
+including passing runs so that the last passing environment can be compared
+with the first failing one. Separate attempt names preserve records on reruns.
+
+Each artifact contains:
+
+- `packages.csv`: the packages visible through `.libPaths()`, their installed
+  versions, library paths, build information, repository, and GitHub remote
+  references/commit SHAs when present. If multiple libraries contain the same
+  package, only the first version that R would find is recorded.
+- `metadata.csv`: key/value records with schema version `1`, UTC collection
+  time, module commit, run ID/attempt, caller workflow reference/SHA, matrix
+  configuration, R version/platform, and runner OS/architecture/image version.
+- `session-info.txt`: `sessionInfo()` and `extSoftVersion()` for R's session
+  and external library details. This is not a full system-package inventory.
+
+Recording and uploading are non-blocking diagnostics; their failure does not
+prevent tests or change the existing release-gating behavior. A dependency
+installation or setup failure before recording will not produce an artifact.
+The records use base R and do not install additional packages.
+CSV fields should be read as strings (in R, `read.csv(..., colClasses = "character")`)
+to preserve commit SHAs and run IDs exactly.
+
+Artifacts expire after **30 days** by default. Callers can set
+`environment_retention_days` under the reusable job's `with:` section, within
+the repository's artifact retention limit. A dashboard consuming these records
+should collect them before expiry and prune its own history to a bounded date
+window; artifact expiry does not remove copies already stored by the dashboard.
+
 ## Update R wrappers
 
 `.github/workflows/update-wrappers.yml` regenerates the R wrappers of a module (`R/<analysis>Wrapper.R`) and their help files (`man/*.Rd`) from its QML forms, and commits them when they changed. It installs [jaspSyntax](https://github.com/jasp-stats/jaspSyntax) with the pre-built SyntaxInterface library from its GitHub release, so nothing of JASP is built. Modules that do not set `hasWrappers: true` in `inst/Description.qml` are skipped.
