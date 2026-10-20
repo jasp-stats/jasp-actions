@@ -86,6 +86,8 @@ raise AssertionError('Unexpected workflow command')
                 wrapper.chmod(0o755)
                 env = {'PATH': str(root) + ':/usr/bin:/bin', 'LANG': 'C.UTF-8',
                        'GH_TOKEN': 'local-fixture-token', 'GH_CONFIG_DIR': str(root / 'config'),
+                       'XDG_STATE_HOME': str(root / 'state'), 'XDG_CACHE_HOME': str(root / 'cache'),
+                       'XDG_DATA_HOME': str(root / 'data'),
                        'GH_REPO': 'fixture/module', 'PR_NUMBER': '443',
                        'NEWS_TEST_DIRECTORY': directory,
                        'NEWS_TEST_API': 'http://127.0.0.1:' + str(server.server_port),
@@ -93,7 +95,7 @@ raise AssertionError('Unexpected workflow command')
                 # Match the runner's bash -e shell; API failure propagation must
                 # not depend on pipefail or a mock that accepts invalid flags.
                 result = subprocess.run(['bash', '--noprofile', '--norc', '-e', '-c', workflow_script()],
-                                        env=env, capture_output=True, text=True, timeout=20)
+                                        cwd=root, env=env, capture_output=True, text=True, timeout=20)
                 calls = [json.loads(line) for line in (root / 'calls.jsonl').read_text().splitlines()]
                 return result, calls, requests
         finally:
