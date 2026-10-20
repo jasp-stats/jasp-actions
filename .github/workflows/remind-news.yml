@@ -17,10 +17,12 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           # Inspect API data only: never check out fork code in this trusted job.
-          NEWS_CHANGED=$(gh api --paginate --slurp "repos/$GH_REPO/pulls/$PR_NUMBER/files?per_page=100" --jq 'any(.[][]; .filename == "NEWS.md")')
+          # gh cannot combine --slurp and --jq. Each page produces a boolean;
+          # collect all pages successfully before deciding whether to remind.
+          NEWS_PAGES=$(gh api --paginate "repos/$GH_REPO/pulls/$PR_NUMBER/files?per_page=100" --jq 'any(.[]; .filename == "NEWS.md")')
 
           # Check if NEWS.md is in that list
-          if [ "$NEWS_CHANGED" = "true" ]; then
+          if grep -Fx 'true' <<< "$NEWS_PAGES" >/dev/null; then
             echo "✅ NEWS.md was updated. No reminder needed."
             exit 0
           else
