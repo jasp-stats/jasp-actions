@@ -164,7 +164,8 @@ runs:
       run: |
         # Install pak
         echo "::group::Install pak"
-        if which sudo >/dev/null; then SUDO="sudo -E --preserve-env=PATH env"; else SUDO=""; fi
+        # pass variables explicitly: sudo-rs (Ubuntu 26.04+) ignores -E
+        if which sudo >/dev/null; then SUDO="sudo env PATH=$PATH R_LIB_FOR_PAK=$R_LIB_FOR_PAK"; else SUDO=""; fi
         $SUDO R -q -e 'dir.create(Sys.getenv("R_LIB_FOR_PAK"), recursive = TRUE, showWarnings = FALSE)'
         $SUDO R -q -e 'if (FALSE) { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK")) } else { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK"), repos = sprintf("https://r-lib.github.io/p/pak/%s/%s/%s/%s", "stable", .Platform$pkgType, R.Version()$os, R.Version()$arch)) }'
         echo "::endgroup::"
@@ -181,7 +182,9 @@ runs:
     - name: Install renv
       run: |
         install.packages("renv")
-        renv::install("rstudio/renv@44b3f47219d103b866c44fcff61e3d81e1b6cb9f")
+        # renv 1.3.1; earlier graph installers fail on RemoteSubdir packages with
+        # "target file ... already exists" when installing with a single job
+        renv::install("rstudio/renv@b9bddd3b176f1f0dfb5ecdeef8625f2cd4fca23c")
       shell: Rscript {0}
 
     - name: Install system dependencies on linux
