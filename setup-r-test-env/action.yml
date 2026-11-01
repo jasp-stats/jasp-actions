@@ -164,8 +164,9 @@ runs:
       run: |
         # Install pak
         echo "::group::Install pak"
-        # pass variables explicitly: sudo-rs (Ubuntu 26.04+) ignores -E
-        if which sudo >/dev/null; then SUDO="sudo env PATH=$PATH R_LIB_FOR_PAK=$R_LIB_FOR_PAK"; else SUDO=""; fi
+        # pass variables explicitly: sudo-rs (Ubuntu 26.04+) ignores -E; HOME keeps
+        # renv's install.packages() shim installing into the runner's project library
+        if which sudo >/dev/null; then SUDO="sudo env HOME=$HOME PATH=$PATH R_LIB_FOR_PAK=$R_LIB_FOR_PAK"; else SUDO=""; fi
         $SUDO R -q -e 'dir.create(Sys.getenv("R_LIB_FOR_PAK"), recursive = TRUE, showWarnings = FALSE)'
         $SUDO R -q -e 'if (FALSE) { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK")) } else { install.packages("pak", lib = Sys.getenv("R_LIB_FOR_PAK"), repos = sprintf("https://r-lib.github.io/p/pak/%s/%s/%s/%s", "stable", .Platform$pkgType, R.Version()$os, R.Version()$arch)) }'
         echo "::endgroup::"
