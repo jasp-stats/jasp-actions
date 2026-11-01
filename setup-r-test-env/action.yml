@@ -199,7 +199,8 @@ runs:
         pkgs <- vapply(lf$Packages,
              FUN = function(x) {
                if (x$Source == "GitHub") {
-                 paste0(x$RemoteUsername, "/", x$RemoteRepo)
+                 # keep the sub-directory, e.g. SamCH93/bfpwr/package
+                 paste(c(x$RemoteUsername, x$RemoteRepo, x$RemoteSubdir), collapse = "/")
                } else {
                  x$Package
                }
