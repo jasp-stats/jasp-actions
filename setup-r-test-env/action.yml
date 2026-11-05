@@ -54,6 +54,16 @@ runs:
       with:
         type: full
 
+    - name: Install libtool on macOS
+      if: runner.os == 'macOS'
+      run: |
+        # The sysreqs bundle above puts automake on the PATH, so httpuv's
+        # bundled libuv reruns its autogen.sh when built from source. That
+        # script calls glibtoolize, which only Homebrew's libtool provides;
+        # without it the build ends with "aclocal-1.16: command not found".
+        brew install libtool
+      shell: bash
+
     - name: Install system dependencies on macOS specific to R devel
       if: runner.os == 'macOS' && inputs.r-version == 'devel'
       run: |
@@ -92,25 +102,23 @@ runs:
 
     - name: Install JAGS on macOS
       if: runner.os == 'macOS' && inputs.needs-jags == 'true'
+      env:
+        JAGS_VERSION: '4.3.2'
+        JAGS_SHA256: '14d171621a582d29a7e6ce11eccf853170367c17d41554e07b88abed76a2fb7e'
       run: |
-        # rm '/usr/local/bin/gfortran'
-        brew install jags
-        brew info jags
-        # Figure out where Homebrew installed JAGS
-        # on arm this is a different location than what the rjags binary expects
-        JAGS_PREFIX=$(brew --prefix jags)
-        echo "JAGS installed at: $JAGS_PREFIX"
-        # Create /usr/local/lib if needed and link the dylibs
-        sudo mkdir -p /usr/local/lib
-        sudo ln -sf "${JAGS_PREFIX}/lib/libjags."*.dylib /usr/local/lib/
-        sudo ln -sf "${JAGS_PREFIX}/lib/libjrmath."*.dylib /usr/local/lib/
-        # move the modules folder (basemod, etc.) as well
-        if [ -d "${JAGS_PREFIX}/lib/JAGS" ]; then
-          sudo ln -sfn "${JAGS_PREFIX}/lib/JAGS" /usr/local/lib/JAGS
-        fi
-        # check for the moved files
-        ls -l /usr/local/lib/libjags*.dylib
-        ls -l /usr/local/lib/libjrmath*.dylib
+        # Use the official (signed, universal) JAGS installer rather than
+        # Homebrew: Homebrew's jags is JAGS 5, which rjags refuses ("rjags
+        # requires JAGS version 4.x.y"), and it pulls in Homebrew's libomp,
+        # which makes data.table build against a libomp that R's own, older
+        # libomp.dylib then shadows at load time. The installer is
+        # self-contained and puts JAGS in /usr/local, where rjags looks for it.
+        pkg="$RUNNER_TEMP/JAGS-${JAGS_VERSION}.pkg"
+        curl -fsSL --retry 5 --retry-all-errors -o "$pkg" \
+          "https://sourceforge.net/projects/mcmc-jags/files/JAGS/4.x/Mac%20OS%20X/JAGS-${JAGS_VERSION}.pkg/download"
+        echo "${JAGS_SHA256}  $pkg" | shasum -a 256 -c -
+        sudo installer -pkg "$pkg" -target /
+        ls -l /usr/local/bin/jags /usr/local/lib/libjags*.dylib /usr/local/lib/libjrmath*.dylib
+        grep '^Version' /usr/local/lib/pkgconfig/jags.pc
       shell: bash
 
       # copied from https://github.com/r-lib/actions/blob/6b49fefb2846ed3e5e6e58366e7f7dfe01377f02/setup-r-dependencies/action.yaml#L67
