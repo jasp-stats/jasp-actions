@@ -198,7 +198,10 @@ runs:
     - name: Install renv
       run: |
         install.packages("renv")
-        renv::install("rstudio/renv@44b3f47219d103b866c44fcff61e3d81e1b6cb9f")
+        # renv 1.3.1. The development version pinned before (44b3f47, 1.2.3.9000)
+        # failed on GitHub packages that live in a sub-directory of their
+        # repository (SamCH93/bfpwr/package): "target file ... already exists".
+        renv::install("rstudio/renv@b9bddd3b176f1f0dfb5ecdeef8625f2cd4fca23c")
       shell: Rscript {0}
 
     - name: Install system dependencies on linux
@@ -212,7 +215,8 @@ runs:
         pkgs <- vapply(lf$Packages,
              FUN = function(x) {
                if (x$Source == "GitHub") {
-                 paste0(x$RemoteUsername, "/", x$RemoteRepo)
+                 # keep the sub-directory of the package, e.g. SamCH93/bfpwr/package
+                 paste(c(x$RemoteUsername, x$RemoteRepo, x$RemoteSubdir), collapse = "/")
                } else {
                  x$Package
                }
