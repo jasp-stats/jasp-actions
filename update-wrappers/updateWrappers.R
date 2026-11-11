@@ -42,10 +42,14 @@ if (!file.exists(descriptionFile))
 description <- read.dcf(descriptionFile)
 packageName <- unname(description[1L, "Package"])
 
-if (!file.exists(file.path(moduleDir, "inst", "Description.qml"))) {
-  message("No inst/Description.qml in ", moduleDir, ": this is not a JASP module, nothing to do.")
-  quit(save = "no", status = 0L)
+# Reports an error as a GitHub annotation, so it shows up on the run summary, and fails the run.
+fail <- function(...) {
+  message("::error::", ...)
+  quit(save = "no", status = 1L)
 }
+
+if (!file.exists(file.path(moduleDir, "inst", "Description.qml")))
+  fail("No inst/Description.qml in ", moduleDir, ": this is not a JASP module.")
 
 # The generator names the module after the directory (it writes `<module>::<analysis>` and
 # `jaspBase::runWrappedAnalysis("<module>", ...)`), so make sure that directory is called after the package.
@@ -66,10 +70,10 @@ if (is.null(run[["result"]])) {
   showOutput(run)
   stop("Reading inst/Description.qml of ", packageName, " failed (exit status ", run[["status"]], ").")
 }
-if (run[["result"]][[1L]] != "TRUE") {
-  message(packageName, " does not set hasWrappers in inst/Description.qml, nothing to do.")
-  quit(save = "no", status = 0L)
-}
+# A module that runs this action expects its wrappers to be kept up to date: skipping it silently would hide that they are not.
+if (run[["result"]][[1L]] != "TRUE")
+  fail(packageName, " does not set hasWrappers: true in inst/Description.qml, so no wrappers are generated. ",
+       "Set it, or remove the update-wrappers workflow from the module.")
 analyses <- run[["result"]][-1L]
 
 rDir             <- file.path(moduleDir, "R")
