@@ -72,8 +72,14 @@ if (run[["result"]][[1L]] != "TRUE") {
 }
 analyses <- run[["result"]][-1L]
 
-rDir             <- file.path(moduleDir, "R")
-existingWrappers <- list.files(rDir, pattern = "Wrapper\\.R$")
+# The function each existing wrapper defines, read before the generator overwrites any of them
+wrapperFunction <- function(file) {
+  definition <- grep("^[A-Za-z0-9_.]+ <- function\\(", readLines(file, warn = FALSE), value = TRUE)
+  if (length(definition) == 0L) NA_character_ else sub(" <- function\\(.*$", "", definition[[1L]])
+}
+rDir              <- file.path(moduleDir, "R")
+existingWrappers  <- list.files(rDir, pattern = "Wrapper\\.R$")
+existingFunctions <- vapply(file.path(rDir, existingWrappers), wrapperFunction, character(1L), USE.NAMES = FALSE)
 
 failed <- character()
 for (analysis in analyses) {
@@ -92,13 +98,14 @@ for (analysis in analyses) {
 if (length(failed) > 0L)
   stop("Generating the wrappers of ", packageName, " failed for: ", paste(failed, collapse = ", "))
 
-# The generator writes R/<analysis>Wrapper.R, but older wrappers may differ in case (e.g. ttestonesampleWrapper.R).
-# A case-insensitive file system (macOS) writes into the existing file; on Linux both would exist and define the
-# analysis twice, so move the generated code into the existing file.
+# The generator writes R/<analysis>Wrapper.R, but an older wrapper of the analysis may have another name: differing
+# only in case (ttestonesampleWrapper.R) or named after an older function (anovaWrapper.R defining AnovaRobust).
+# Both files would then define the analysis, so move the generated code into the file that already defined it.
+# A case-insensitive file system (macOS) has already written a name differing only in case into the existing file.
 for (analysis in analyses) {
   generated <- paste0(analysis, "Wrapper.R")
-  existing  <- existingWrappers[tolower(existingWrappers) == tolower(generated) & existingWrappers != generated]
-  if (length(existing) == 1L && generated %in% list.files(rDir) && existing %in% list.files(rDir)) {
+  existing  <- existingWrappers[existingFunctions %in% analysis & existingWrappers != generated]
+  if (length(existing) == 1L && !(generated %in% existingWrappers) && generated %in% list.files(rDir) && existing %in% list.files(rDir)) {
     file.copy(file.path(rDir, generated), file.path(rDir, existing), overwrite = TRUE)
     file.remove(file.path(rDir, generated))
   }
