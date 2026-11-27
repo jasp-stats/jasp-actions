@@ -125,12 +125,17 @@ runs:
     # options(repos) to the repositories of renv.lock, so pak then cannot find jaspSyntax.
     # R reads R_PROFILE_USER instead of ./.Rprofile, so this profile runs the module's
     # .Rprofile (or ~/.Rprofile, as R would) and then adds the R-universe back.
+    # renv's activate.R sources R_PROFILE_USER itself when its autoloader is disabled (as
+    # during R CMD INSTALL), so this profile runs again from inside the .Rprofile it sources:
+    # the guard keeps that from recursing until "evaluation nested too deeply".
     - name: Keep the jasp-stats R-universe when renv is activated
       run: |
         profile <- file.path(Sys.getenv("RUNNER_TEMP"), "jasp-Rprofile.R")
         writeLines(c(
           "# Written by jasp-actions/setup-r-test-env",
-          "local({",
+          "if (!isTRUE(getOption('jasp.rprofile.sourcing'))) local({",
+          "  options(jasp.rprofile.sourcing = TRUE)",
+          "  on.exit(options(jasp.rprofile.sourcing = NULL))",
           "  profile <- if (file.exists('.Rprofile')) '.Rprofile' else path.expand('~/.Rprofile')",
           "  if (file.exists(profile)) source(profile)",
           "})",
