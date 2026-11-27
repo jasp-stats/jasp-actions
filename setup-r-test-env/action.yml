@@ -344,7 +344,9 @@ runs:
     - uses: r-lib/actions/setup-renv@v2
       if: inputs.packages == 'lockfile'
       with:
-        cache-version: 6
+        # 7: a lockfile update restored the closest older cache, and renv 1.3.1 then test-loaded a package
+        # (gridExtra) whose cached dependency (gtable) needed a newer package (rlang) not installed yet.
+        cache-version: 7
 
     - uses: r-lib/actions/setup-r-dependencies@v2
       if: inputs.packages == 'latest'
